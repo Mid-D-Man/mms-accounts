@@ -1,0 +1,31 @@
+[package]
+name = "mms-accounts"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+leptos = { version = "0.8", features = ["csr", "nightly"] }
+console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+
+web-sys = { version = "0.3", features = [
+  "console", "Window", "Document", "Element", "HtmlElement",
+  "Storage", "EventTarget", "MouseEvent", "KeyboardEvent", 
+  "SubmitEvent", "Location", "History",
+] }
+
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+gloo-storage = "0.3"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"

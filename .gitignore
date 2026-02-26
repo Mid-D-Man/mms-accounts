@@ -1,0 +1,14 @@
+/target
+
+# Environment
+.env
+
+# Build artifacts
+dist/
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

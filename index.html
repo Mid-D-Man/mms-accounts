@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MidManStudio Accounts</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <link data-trunk rel="rust" data-wasm-opt="z" />
+    <link data-trunk rel="css" href="styles/main.css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #040812;
+            color: #e8edf8;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        .loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #040812;
+        }
+        .loading-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            color: #00d4ff;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <div class="loading-text">Initializing MmS Accounts...</div>
+    </div>
+</body>
+</html>
