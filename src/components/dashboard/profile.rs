@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
 use crate::components::icons::{IconLoader, IconCheck};
 
@@ -15,7 +16,6 @@ pub fn ProfileView(
     let (success,      set_success)      = signal(false);
     let (error,        set_error)        = signal(String::new());
 
-    // Pre-fill fields when profile loads
     Effect::new(move |_| {
         if let Some(p) = profile.get() {
             set_display_name.set(p.display_name.unwrap_or_default());
