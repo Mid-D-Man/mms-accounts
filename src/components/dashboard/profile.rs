@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use gloo_storage::Storage;
+use std::rc::Rc;
 use crate::supabase::{SupabaseClient, Profile};
 use crate::components::icons::{IconLoader, IconCheck};
 
@@ -15,6 +16,10 @@ pub fn ProfileView(
     let (loading,      set_loading)      = signal(false);
     let (success,      set_success)      = signal(false);
     let (error,        set_error)        = signal(String::new());
+
+    // Wrap in Rc so the closure stays FnMut — each submit clones the Rc,
+    // never moves out of the outer closure.
+    let on_updated = Rc::new(on_updated);
 
     Effect::new(move |_| {
         if let Some(p) = profile.get() {
@@ -43,6 +48,9 @@ pub fn ProfileView(
         let bio_val     = bio.get();
         let website_val = website.get();
         let client      = SupabaseClient::new();
+
+        // Clone the Rc for this particular spawn — outer closure is untouched.
+        let on_updated = Rc::clone(&on_updated);
 
         spawn_local(async move {
             match client.update_profile(
