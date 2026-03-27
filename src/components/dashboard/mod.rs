@@ -1,55 +1,102 @@
+pub mod sidebar;
+pub mod header;
+pub mod overview;
 pub mod profile;
 
-use leptos::prelude::*;
-use crate::supabase::SupabaseClient;
-
+pub use sidebar::*;
+pub use header::*;
+pub use overview::*;
 pub use profile::*;
 
+use leptos::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use crate::supabase::{SupabaseClient, Profile};
+
+#[derive(Clone, PartialEq)]
+pub enum DashView {
+    Overview,
+    Profile,
+    Settings,
+}
+
 #[component]
-pub fn Dashboard() -> impl IntoView {
-    let (user, set_user) = signal(None::<String>);
-    let (loading, set_loading) = signal(true);
+pub fn DashboardPage() -> impl IntoView {
+    // Guard — redirect to auth if no token
+    if !SupabaseClient::is_logged_in() {
+        if let Some(window) = web_sys::window() {
+            let _ = window.location().set_hash("auth");
+        }
+        return view! { <div></div> }.into_any();
+    }
 
-    let client = SupabaseClient::new();
+    let (profile,      set_profile)      = signal(None::<Profile>);
+    let (loading,      set_loading)      = signal(true);
+    let (active_view,  set_active_view)  = signal(DashView::Overview);
 
+    // Load profile on mount
     Effect::new(move |_| {
-        let client_clone = client.clone();
+        let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
+            .unwrap_or_default();
+
+        if user_id.is_empty() {
+            set_loading.set(false);
+            return;
+        }
+
+        let client = SupabaseClient::new();
+
         spawn_local(async move {
-            match client_clone.get_user().await {
-                Ok(user_data) => {
-                    set_user.set(Some(user_data.email));
+            match client.get_profile(&user_id).await {
+                Ok(p)  => {
+                    set_profile.set(Some(p));
                     set_loading.set(false);
                 }
                 Err(_) => {
+                    // Session may have expired
+                    SupabaseClient::clear_session();
                     if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_hash("#auth");
+                        let _ = window.location().set_hash("auth");
                     }
                 }
             }
         });
     });
 
-    let handle_signout = move |_| {
-        client.sign_out();
-        if let Some(window) = web_sys::window() {
-            let _ = window.location().set_hash("#auth");
-        }
-    };
-
     view! {
-        <div class="dashboard">
-            {move || if loading.get() {
-                view! { <p>"Loading..."</p> }.into_any()
-            } else {
-                view! {
-                    <div class="dashboard-content">
-                        <h1>"Welcome, " {user.get().unwrap_or_default()}</h1>
-                        <button class="btn-secondary" on:click=handle_signout>
-                            "Sign Out"
-                        </button>
-                    </div>
-                }.into_any()
-            }}
+        <div class="dashboard-layout">
+            <DashboardSidebar
+                active_view=active_view
+                on_navigate=move |v| set_active_view.set(v)
+                profile=profile
+            />
+
+            <div class="dashboard-main">
+                <DashboardHeader profile=profile />
+
+                <main class="dashboard-content">
+                    {move || if loading.get() {
+                        view! {
+                            <div class="dashboard-loading">
+                                <div class="spinner-wrap">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        }.into_any()
+                    } else {
+                        match active_view.get() {
+                            DashView::Overview => view! {
+                                <OverviewView profile=profile />
+                            }.into_any(),
+                            DashView::Profile | DashView::Settings => view! {
+                                <ProfileView
+                                    profile=profile
+                                    on_updated=move |p| set_profile.set(Some(p))
+                                />
+                            }.into_any(),
+                        }
+                    }}
+                </main>
+            </div>
         </div>
-    }
+    }.into_any()
 }
