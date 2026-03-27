@@ -1,12 +1,12 @@
 [build]
 target = "index.html"
-dist = "dist"
+dist   = "dist"
 
 [watch]
-watch = ["src", "styles"]
+watch  = ["src", "styles"]
 ignore = ["dist", "target"]
 
 [serve]
 address = "127.0.0.1"
-port = 8080
-open = true
+port    = 8080
+open    = false
