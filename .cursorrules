@@ -1,0 +1,120 @@
+```
+
+---
+
+**`.cursorrules`** — Cursor AI rules file, place at repo root
+```
+You are working on mms-accounts — MidManStudio's authentication and account management
+portal. Stack: Leptos 0.8 (Rust → WebAssembly, CSR), Supabase, Cloudflare Pages.
+
+═══════════════════════════════════════════════════════════
+ABSOLUTE RULES — NEVER VIOLATE UNDER ANY CIRCUMSTANCES
+═══════════════════════════════════════════════════════════
+
+1. NO EMOJIS — EVER. Not in code, templates, strings, comments, UI text, or anywhere
+   else. All icons must be inline SVG elements defined as Leptos components.
+
+2. COMPONENT-DRIVEN ONLY. Every distinct UI element is a named #[component] fn.
+   No monolithic render functions. Split early, split often.
+
+3. NO JAVASCRIPT FILES. All behaviour lives in Rust. No .js files, no script tags.
+
+4. SVG ICONS ONLY. All icons are components in src/components/icons/mod.rs.
+   Each icon is a #[component] fn returning an <svg> element with currentColor stroke.
+
+5. HASH ROUTING ONLY (CSR). Routes are read from window.location.hash. No leptos_router
+   url-based routing. The app.rs router matches on hash string.
+
+6. ASYNC = spawn_local ONLY. Use wasm_bindgen_futures::spawn_local for all async work.
+   No tokio, no std::thread, no block_on.
+
+7. HTTP = reqwest ONLY. All Supabase API calls via reqwest. No JS fetch wrappers.
+
+8. STORAGE = gloo-storage ONLY. JWT and session data via gloo_storage::LocalStorage.
+
+9. CSS CUSTOM PROPERTIES ONLY. No hardcoded color/spacing values in CSS. Use :root
+   variables. No inline styles except for dynamic runtime values (e.g. widths from state).
+
+10. LEPTOS 0.8 PATTERNS:
+    - Signals:  let (val, set_val) = signal(initial_value);
+    - Effects:  Effect::new(move |_| { ... });
+    - Children: .into_any() for conditional view branches
+    - Input:    event_target_value(&ev) to read input events
+    - Props:    #[prop(default = ...)] for optional props
+
+═══════════════════════════════════════════
+DESIGN SYSTEM — ALWAYS USE THESE TOKENS
+═══════════════════════════════════════════
+
+Colors (CSS vars defined in styles/main.css):
+  --cobalt:       #0047ab   (primary)
+  --cobalt-light: #4169e1   (primary hover / gradient end)
+  --cyan-neon:    #00d4ff   (accent / glow)
+  --crimson:      #dc143c   (destructive / alert)
+  --bg-base:      #040812   (page background)
+  --bg-surface:   #070f1f   (card / panel background)
+  --text-primary: #e8edf8
+  --text-secondary:#8fa0c0
+  --text-muted:   #4a5880
+  --border-subtle:rgba(65,105,225,0.18)
+
+Typography:
+  --font-display: 'Orbitron', monospace      (headings, labels, buttons)
+  --font-body:    'Rajdhani', sans-serif      (body text, forms)
+  --font-mono:    'JetBrains Mono', monospace (code, metadata, badges)
+
+═══════════════════════════════════
+PROJECT STRUCTURE
+═══════════════════════════════════
+
+src/
+  lib.rs                     — WASM entry point, mounts App
+  app.rs                     — App component, hash router, auth context
+  supabase/
+    mod.rs
+    client.rs                — SupabaseClient struct, constants
+    auth.rs                  — sign_up, sign_in, sign_out, get_user, update_profile
+  components/
+    mod.rs
+    icons/
+      mod.rs                 — ALL SVG icon components
+    ui/
+      mod.rs                 — Button, Input, Card, Badge, Spinner
+    auth/
+      mod.rs                 — AuthPage wrapper
+      login.rs               — LoginForm
+      signup.rs              — SignupForm
+      oauth_buttons.rs       — GitHub / Google OAuth buttons
+    landing/
+      mod.rs                 — LandingPage
+      hero.rs                — HeroSection
+      features.rs            — FeaturesSection
+    dashboard/
+      mod.rs                 — DashboardPage, shell
+      sidebar.rs             — DashboardSidebar
+      header.rs              — DashboardHeader
+      overview.rs            — OverviewView
+      profile.rs             — ProfileView
+    admin/
+      mod.rs                 — AdminPage, shell
+      stats.rs               — AdminStats cards
+      user_table.rs          — UserTable
+styles/
+  main.css                   — All styles
+
+═══════════════════════════════════
+SUPABASE API PATTERNS
+═══════════════════════════════════
+
+Base URL: SUPABASE_URL constant in client.rs
+Auth endpoints:
+  POST /auth/v1/signup                  — register
+  POST /auth/v1/token?grant_type=password — login
+  GET  /auth/v1/user                    — get current user (Bearer token)
+  POST /auth/v1/logout                  — sign out
+  POST /auth/v1/user  (PATCH method)    — update user metadata
+REST endpoints:
+  GET  /rest/v1/profiles?id=eq.{uid}   — get profile
+  PATCH /rest/v1/profiles?id=eq.{uid}  — update profile
+Headers always needed: apikey: ANON_KEY, Content-Type: application/json
+Auth headers: Authorization: Bearer {access_token}
