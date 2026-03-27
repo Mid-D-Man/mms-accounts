@@ -1,0 +1,69 @@
+{
+  "project": "mms-accounts",
+  "studio": "MidManStudio",
+  "version": "1.0.0",
+  "stack": {
+    "language": "Rust",
+    "framework": "Leptos 0.8",
+    "target": "wasm32-unknown-unknown",
+    "build_tool": "Trunk",
+    "backend": "Supabase",
+    "hosting": "Cloudflare Pages"
+  },
+  "hard_rules": {
+    "no_emojis": {
+      "description": "Zero emojis anywhere in the codebase. SVG icons only.",
+      "severity": "error",
+      "enforced": true
+    },
+    "no_javascript_files": {
+      "description": "No .js files. All behaviour in Rust.",
+      "severity": "error",
+      "enforced": true
+    },
+    "svg_icons_only": {
+      "description": "All icons are Leptos components returning inline SVG.",
+      "file": "src/components/icons/mod.rs",
+      "severity": "error"
+    },
+    "component_driven": {
+      "description": "Every UI element is a named #[component] fn.",
+      "severity": "error"
+    },
+    "hash_routing": {
+      "description": "Hash-based routing only. No URL routing.",
+      "severity": "error"
+    },
+    "async_spawn_local": {
+      "description": "All async via wasm_bindgen_futures::spawn_local.",
+      "severity": "error"
+    },
+    "no_inline_colors": {
+      "description": "Use CSS custom properties. No hardcoded hex values in CSS.",
+      "severity": "warning"
+    }
+  },
+  "design_tokens": {
+    "cobalt":          "#0047ab",
+    "cobalt_light":    "#4169e1",
+    "cyan_neon":       "#00d4ff",
+    "crimson":         "#dc143c",
+    "bg_base":         "#040812",
+    "bg_surface":      "#070f1f",
+    "text_primary":    "#e8edf8",
+    "text_secondary":  "#8fa0c0",
+    "text_muted":      "#4a5880",
+    "border_subtle":   "rgba(65,105,225,0.18)"
+  },
+  "fonts": {
+    "display": "Orbitron",
+    "body":    "Rajdhani",
+    "mono":    "JetBrains Mono"
+  },
+  "deploy": {
+    "trigger_keyword": "--cloudflare",
+    "platform": "Cloudflare Pages",
+    "project_name": "mms-accounts",
+    "build_output": "dist"
+  }
+    }
