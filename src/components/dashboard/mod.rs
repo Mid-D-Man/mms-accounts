@@ -10,6 +10,7 @@ pub use profile::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
 
 #[derive(Clone, PartialEq)]
@@ -21,7 +22,6 @@ pub enum DashView {
 
 #[component]
 pub fn DashboardPage() -> impl IntoView {
-    // Guard — redirect to auth if no token
     if !SupabaseClient::is_logged_in() {
         if let Some(window) = web_sys::window() {
             let _ = window.location().set_hash("auth");
@@ -33,7 +33,6 @@ pub fn DashboardPage() -> impl IntoView {
     let (loading,      set_loading)      = signal(true);
     let (active_view,  set_active_view)  = signal(DashView::Overview);
 
-    // Load profile on mount
     Effect::new(move |_| {
         let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
             .unwrap_or_default();
@@ -52,7 +51,6 @@ pub fn DashboardPage() -> impl IntoView {
                     set_loading.set(false);
                 }
                 Err(_) => {
-                    // Session may have expired
                     SupabaseClient::clear_session();
                     if let Some(window) = web_sys::window() {
                         let _ = window.location().set_hash("auth");
@@ -99,4 +97,4 @@ pub fn DashboardPage() -> impl IntoView {
             </div>
         </div>
     }.into_any()
-}
+                        }
