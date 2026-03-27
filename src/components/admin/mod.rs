@@ -6,6 +6,7 @@ pub use user_table::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
 use crate::components::icons::{IconShield, IconLogOut};
 
@@ -23,18 +24,15 @@ pub fn AdminPage() -> impl IntoView {
     let (error,     set_error)     = signal(String::new());
     let (is_admin,  set_is_admin)  = signal(false);
 
-    // Verify admin role and load users
     Effect::new(move |_| {
         let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
             .unwrap_or_default();
         let client  = SupabaseClient::new();
 
         spawn_local(async move {
-            // Check own profile for admin role
             match client.get_profile(&user_id).await {
                 Ok(p) if p.is_admin() => {
                     set_is_admin.set(true);
-                    // Load all profiles
                     match client.get_all_profiles().await {
                         Ok(all) => {
                             set_profiles.set(all);
@@ -47,7 +45,6 @@ pub fn AdminPage() -> impl IntoView {
                     }
                 }
                 Ok(_) => {
-                    // Not admin — send back
                     if let Some(window) = web_sys::window() {
                         let _ = window.location().set_hash("dashboard");
                     }
@@ -128,4 +125,4 @@ pub fn AdminPage() -> impl IntoView {
             </main>
         </div>
     }.into_any()
-                          }
+}
