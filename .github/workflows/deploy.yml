@@ -1,0 +1,119 @@
+name: Deploy MMS Accounts to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+jobs:
+
+  # ── 1. Check trigger ─────────────────────────────────────────────────────────
+  parse-trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      run_deploy: ${{ steps.decide.outputs.run_deploy }}
+    steps:
+      - name: Decide whether to deploy
+        id: decide
+        run: |
+          RUN=false
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RUN=true
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            MSG="${{ github.event.pull_request.title }}"
+            echo "$MSG" | grep -qiE '\-\-cloudflare\b' && RUN=true || true
+          else
+            MSG="${{ github.event.head_commit.message }}"
+            echo "$MSG" | grep -qiE '\-\-cloudflare\b' && RUN=true || true
+          fi
+
+          echo "run_deploy=$RUN" >> $GITHUB_OUTPUT
+          echo "Run deploy: $RUN"
+
+  # ── 2. Build & deploy ────────────────────────────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    needs: parse-trigger
+    if: needs.parse-trigger.outputs.run_deploy == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Add WASM target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ runner.os }}-mms-accounts-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Trunk
+        run: |
+          wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.21.4/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+          chmod +x trunk
+          ./trunk --version
+
+      - name: Build with Trunk
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: ./trunk build --release
+
+      - name: Verify dist output
+        run: |
+          echo "=== dist/ contents ==="
+          ls -la dist/
+          echo "=== WASM file ==="
+          ls -lh dist/*.wasm || echo "WARNING: no .wasm found"
+
+      - name: Create Pages project if needed
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler pages project create mms-accounts \
+            --production-branch=main 2>&1 || echo "Project already exists, continuing"
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler pages deploy dist \
+            --project-name=mms-accounts \
+            --branch=main \
+            --commit-dirty=true
+
+  # ── 3. Summary ───────────────────────────────────────────────────────────────
+  summary:
+    runs-on: ubuntu-latest
+    needs: [parse-trigger, deploy]
+    if: always()
+    steps:
+      - name: Print summary
+        run: |
+          echo "================================================="
+          echo "  MMS Accounts — Deploy Summary"
+          echo "================================================="
+          echo "Build:   #${{ github.run_number }}"
+          echo "Branch:  ${{ github.ref_name }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Deploy:  ${{ needs.deploy.result || 'skipped' }}"
+          echo ""
+          if [ "${{ needs.parse-trigger.outputs.run_deploy }}" != "true" ]; then
+            echo "Skipped — add --cloudflare to your commit message to trigger a deploy."
+          fi
