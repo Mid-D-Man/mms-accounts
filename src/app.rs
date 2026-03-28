@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::spawn_local;
 
 use crate::components::{
     landing::LandingPage,
@@ -7,6 +8,7 @@ use crate::components::{
     dashboard::DashboardPage,
     admin::AdminPage,
 };
+use crate::supabase::SupabaseClient;
 
 // ── Route enum ─────────────────────────────────────────────────
 
@@ -33,9 +35,48 @@ impl Route {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (route, set_route) = signal(get_current_route());
+    let (route,   set_route)   = signal(get_current_route());
+    // true while we are attempting the initial session refresh
+    let (booting, set_booting) = signal(true);
 
-    // Listen for hash changes
+    // ── Session bootstrap ──────────────────────────────────────
+    // On every cold load / refresh: if a refresh token exists in
+    // localStorage, hit Supabase to get a fresh access token before
+    // rendering any protected page. This means the user stays logged
+    // in across browser restarts and tab closes.
+    Effect::new(move |_| {
+        let client = SupabaseClient::new();
+        spawn_local(async move {
+            match client.try_refresh_session().await {
+                Ok(true) => {
+                    // Refreshed successfully — stay on whatever route the
+                    // hash says (dashboard / admin / landing).
+                }
+                Ok(false) => {
+                    // No refresh token — first visit or explicitly logged out.
+                    // If the hash points at a protected page, bounce to auth.
+                    let current = get_current_route();
+                    if current == Route::Dashboard || current == Route::Admin {
+                        set_route.set(Route::Auth);
+                        if let Some(w) = web_sys::window() {
+                            let _ = w.location().set_hash("auth");
+                        }
+                    }
+                }
+                Err(_) => {
+                    // Refresh token was expired/revoked — clear and bounce.
+                    SupabaseClient::clear_session();
+                    set_route.set(Route::Auth);
+                    if let Some(w) = web_sys::window() {
+                        let _ = w.location().set_hash("auth");
+                    }
+                }
+            }
+            set_booting.set(false);
+        });
+    });
+
+    // ── Hash-change listener ───────────────────────────────────
     Effect::new(move |_| {
         if let Some(window) = web_sys::window() {
             let set_r = set_route.clone();
@@ -54,11 +95,17 @@ pub fn App() -> impl IntoView {
 
     view! {
         <div class="mms-app">
-            {move || match route.get() {
-                Route::Landing   => view! { <LandingPage /> }.into_any(),
-                Route::Auth      => view! { <AuthPage /> }.into_any(),
-                Route::Dashboard => view! { <DashboardPage /> }.into_any(),
-                Route::Admin     => view! { <AdminPage /> }.into_any(),
+            {move || if booting.get() {
+                // Keep the existing WASM loading screen visible while we
+                // verify the session — no flash of wrong content.
+                view! { <div></div> }.into_any()
+            } else {
+                match route.get() {
+                    Route::Landing   => view! { <LandingPage /> }.into_any(),
+                    Route::Auth      => view! { <AuthPage /> }.into_any(),
+                    Route::Dashboard => view! { <DashboardPage /> }.into_any(),
+                    Route::Admin     => view! { <AdminPage /> }.into_any(),
+                }
             }}
         </div>
     }
