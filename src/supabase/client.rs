@@ -2,8 +2,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use gloo_storage::{LocalStorage, Storage};
 
-pub const SUPABASE_URL: &str = "https://your-project.supabase.co";
-pub const SUPABASE_ANON_KEY: &str = "your-anon-key-here";
+pub const SUPABASE_URL: &str = env!("SUPABASE_URL");
+pub const SUPABASE_ANON_KEY: &str = env!("SUPABASE_ANON_KEY");
 
 #[derive(Clone)]
 pub struct SupabaseClient {
@@ -122,4 +122,4 @@ impl Profile {
 pub struct SupabaseError {
     pub message: String,
     pub error:   Option<String>,
-            }
+    }
