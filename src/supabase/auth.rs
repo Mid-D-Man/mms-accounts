@@ -1,6 +1,7 @@
 use super::client::*;
 use serde::{Deserialize, Serialize};
 use gloo_storage::{LocalStorage, Storage};
+use gloo_net::http::Request;
 
 // ── Request bodies ─────────────────────────────────────────────
 
@@ -34,9 +35,6 @@ struct SignUpResponse {
     token_type:    Option<String>,
     expires_in:    Option<u64>,
     user:          Option<User>,
-    // Top-level user fields present when confirmation is required
-    id:            Option<String>,
-    email:         Option<String>,
 }
 
 // ── Outcome returned to callers ────────────────────────────────
@@ -63,16 +61,16 @@ impl SupabaseClient {
             data:     metadata.unwrap_or(serde_json::json!({})),
         };
 
-        let res = self.client
-            .post(&self.auth_url("/signup"))
+        let res = Request::post(&self.auth_url("/signup"))
             .header("apikey",       &self.anon_key)
             .header("Content-Type", "application/json")
             .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        if !res.status().is_success() {
+        if !res.ok() {
             let text = res.text().await.unwrap_or_default();
             let msg = serde_json::from_str::<SupabaseError>(&text)
                 .map(|e| e.message)
@@ -115,16 +113,16 @@ impl SupabaseClient {
             password: password.to_string(),
         };
 
-        let res = self.client
-            .post(&self.auth_url("/token?grant_type=password"))
+        let res = Request::post(&self.auth_url("/token?grant_type=password"))
             .header("apikey",       &self.anon_key)
             .header("Content-Type", "application/json")
             .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        if !res.status().is_success() {
+        if !res.ok() {
             let text = res.text().await.unwrap_or_default();
             let msg = serde_json::from_str::<SupabaseError>(&text)
                 .map(|e| e.message)
@@ -144,10 +142,9 @@ impl SupabaseClient {
         let token = LocalStorage::get::<String>("mms_access_token")
             .map_err(|_| "No session")?;
 
-        let _ = self.client
-            .post(&self.auth_url("/logout"))
+        let _ = Request::post(&self.auth_url("/logout"))
             .header("apikey",        &self.anon_key)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", &format!("Bearer {}", token))
             .send()
             .await;
 
@@ -159,15 +156,14 @@ impl SupabaseClient {
         let token = LocalStorage::get::<String>("mms_access_token")
             .map_err(|_| "Not authenticated".to_string())?;
 
-        let res = self.client
-            .get(&self.auth_url("/user"))
+        let res = Request::get(&self.auth_url("/user"))
             .header("apikey",        &self.anon_key)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", &format!("Bearer {}", token))
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        if !res.status().is_success() {
+        if !res.ok() {
             Self::clear_session();
             return Err("Session expired".to_string());
         }
@@ -187,16 +183,15 @@ impl SupabaseClient {
             user_id
         );
 
-        let res = self.client
-            .get(&url)
+        let res = Request::get(&url)
             .header("apikey",        &self.anon_key)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", &format!("Bearer {}", token))
             .header("Accept",        "application/json")
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        if !res.status().is_success() {
+        if !res.ok() {
             return Err("Failed to fetch profile".to_string());
         }
 
@@ -232,18 +227,17 @@ impl SupabaseClient {
             user_id
         );
 
-        let res = self.client
-            .patch(&url)
+        let res = Request::patch(&url)
             .header("apikey",        &self.anon_key)
-            .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Type",  "application/json")
+            .header("Authorization", &format!("Bearer {}", token))
             .header("Prefer",        "return=representation")
             .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        if !res.status().is_success() {
+        if !res.ok() {
             let text = res.text().await.unwrap_or_default();
             return Err(format!("Update failed: {}", text));
         }
@@ -265,16 +259,15 @@ impl SupabaseClient {
             self.rest_url("profiles")
         );
 
-        let res = self.client
-            .get(&url)
+        let res = Request::get(&url)
             .header("apikey",        &self.anon_key)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", &format!("Bearer {}", token))
             .header("Accept",        "application/json")
             .send()
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        if !res.status().is_success() {
+        if !res.ok() {
             return Err("Failed to fetch profiles — admin role required".to_string());
         }
 
@@ -290,4 +283,4 @@ impl SupabaseClient {
         let _ = LocalStorage::set("mms_refresh_token", &session.refresh_token);
         let _ = LocalStorage::set("mms_user_id",       &session.user.id);
     }
-                }
+}
