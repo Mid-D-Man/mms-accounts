@@ -1,5 +1,5 @@
 use super::client::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use gloo_storage::{LocalStorage, Storage};
 
 // ── Request bodies ─────────────────────────────────────────────
@@ -18,11 +18,6 @@ struct SignInBody {
 }
 
 #[derive(Serialize)]
-struct UpdateUserBody {
-    data: serde_json::Value,
-}
-
-#[derive(Serialize)]
 struct UpdateProfileBody {
     display_name: Option<String>,
     bio:          Option<String>,
@@ -30,7 +25,30 @@ struct UpdateProfileBody {
     avatar_url:   Option<String>,
 }
 
-// ── Auth methods on SupabaseClient ─────────────────────────────
+// Flexible signup response — access_token is absent when
+// Supabase requires email confirmation first.
+#[derive(Debug, Deserialize)]
+struct SignUpResponse {
+    access_token:  Option<String>,
+    refresh_token: Option<String>,
+    token_type:    Option<String>,
+    expires_in:    Option<u64>,
+    user:          Option<User>,
+    // Top-level user fields present when confirmation is required
+    id:            Option<String>,
+    email:         Option<String>,
+}
+
+// ── Outcome returned to callers ────────────────────────────────
+
+pub enum SignUpOutcome {
+    /// Signed in immediately — session persisted.
+    LoggedIn,
+    /// Confirmation email sent — user must click link first.
+    ConfirmationRequired,
+}
+
+// ── Auth methods ───────────────────────────────────────────────
 
 impl SupabaseClient {
     pub async fn sign_up(
@@ -38,7 +56,7 @@ impl SupabaseClient {
         email:    &str,
         password: &str,
         metadata: Option<serde_json::Value>,
-    ) -> Result<AuthSession, String> {
+    ) -> Result<SignUpOutcome, String> {
         let body = SignUpBody {
             email:    email.to_string(),
             password: password.to_string(),
@@ -62,12 +80,29 @@ impl SupabaseClient {
             return Err(msg);
         }
 
-        let session: AuthSession = res.json()
+        let payload: SignUpResponse = res.json()
             .await
             .map_err(|e| format!("Parse error: {}", e))?;
 
-        Self::persist_session(&session);
-        Ok(session)
+        // Full session returned — email confirmation is disabled.
+        if let (Some(access_token), Some(refresh_token), Some(user)) = (
+            payload.access_token,
+            payload.refresh_token,
+            payload.user,
+        ) {
+            let session = AuthSession {
+                access_token,
+                refresh_token,
+                token_type: payload.token_type.unwrap_or_else(|| "bearer".into()),
+                expires_in: payload.expires_in,
+                user,
+            };
+            Self::persist_session(&session);
+            return Ok(SignUpOutcome::LoggedIn);
+        }
+
+        // No access_token — Supabase sent a confirmation email instead.
+        Ok(SignUpOutcome::ConfirmationRequired)
     }
 
     pub async fn sign_in(
@@ -255,4 +290,4 @@ impl SupabaseClient {
         let _ = LocalStorage::set("mms_refresh_token", &session.refresh_token);
         let _ = LocalStorage::set("mms_user_id",       &session.user.id);
     }
-}
+                }
