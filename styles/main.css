@@ -101,7 +101,146 @@ h1, h2, h3, h4 {
 .icon-xs   { width: 12px; height: 12px; }
 .icon-sm   { width: 15px; height: 15px; }
 .icon-lg   { width: 28px; height: 28px; }
+/* ── Paste this block into styles/main.css ────────────────────
+   Add it right after the .status-msg--info { } block (~line 195)
+   ─────────────────────────────────────────────────────────── */
 
+/* ── Email verification banner ──────────────────────────────── */
+.verify-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(65,105,225,0.07);
+  border: 1px solid rgba(65,105,225,0.25);
+  margin-bottom: 1rem;
+}
+
+.verify-banner-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.verify-banner-text strong { color: var(--text-primary); }
+
+.verify-resend-btn {
+  align-self: flex-start;
+  color: var(--cyan-neon);
+  border-color: rgba(0,212,255,0.35);
+}
+
+.verify-resend-btn:hover:not(:disabled) {
+  background: rgba(0,212,255,0.07);
+  border-color: var(--cyan-neon);
+}
+
+/* ── Forgot password link under password field ───────────────── */
+.forgot-link-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.3rem;
+}
+
+.link-btn--muted {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+
+.link-btn--muted:hover { color: var(--cobalt-light); }
+
+/* ── Forgot password form header ─────────────────────────────── */
+.forgot-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.forgot-title {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.forgot-sub {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* ── Reset password form header ──────────────────────────────── */
+.reset-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.reset-title {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.reset-sub {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* ── OAuth section ───────────────────────────────────────────── */
+.oauth-section {
+  margin-bottom: 0.25rem;
+}
+
+.btn-oauth {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  gap: 0.65rem;
+  padding: 0.75rem 1.25rem;
+  transition: all 0.25s var(--ease-smooth);
+}
+
+.btn-oauth:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.btn-oauth--google:hover:not(:disabled) {
+  border-color: rgba(66,133,244,0.5);
+  box-shadow: 0 4px 16px rgba(66,133,244,0.15);
+}
+
+/* ── OAuth divider ───────────────────────────────────────────── */
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0 0.5rem;
+}
+
+.oauth-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.oauth-divider-text {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+   }
 /* ── Buttons ────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
