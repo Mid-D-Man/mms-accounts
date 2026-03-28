@@ -19,6 +19,11 @@ struct SignInBody {
 }
 
 #[derive(Serialize)]
+struct RefreshBody {
+    refresh_token: String,
+}
+
+#[derive(Serialize)]
 struct UpdateProfileBody {
     display_name: Option<String>,
     bio:          Option<String>,
@@ -82,7 +87,6 @@ impl SupabaseClient {
             .await
             .map_err(|e| format!("Parse error: {}", e))?;
 
-        // Full session returned — email confirmation is disabled.
         if let (Some(access_token), Some(refresh_token), Some(user)) = (
             payload.access_token,
             payload.refresh_token,
@@ -99,7 +103,6 @@ impl SupabaseClient {
             return Ok(SignUpOutcome::LoggedIn);
         }
 
-        // No access_token — Supabase sent a confirmation email instead.
         Ok(SignUpOutcome::ConfirmationRequired)
     }
 
@@ -136,6 +139,41 @@ impl SupabaseClient {
 
         Self::persist_session(&session);
         Ok(session)
+    }
+
+    /// Attempt to renew the access token using the stored refresh token.
+    /// Returns Ok(true) if the session was refreshed and persisted.
+    /// Returns Ok(false) if there is no refresh token stored (first visit / logged out).
+    /// Returns Err if the refresh token is invalid/expired — caller should clear session.
+    pub async fn try_refresh_session(&self) -> Result<bool, String> {
+        let refresh_token = match LocalStorage::get::<String>("mms_refresh_token") {
+            Ok(t) if !t.is_empty() => t,
+            _ => return Ok(false), // nothing stored — not an error, just not logged in
+        };
+
+        let body = RefreshBody { refresh_token };
+
+        let res = Request::post(&self.auth_url("/token?grant_type=refresh_token"))
+            .header("apikey",       &self.anon_key)
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            // Refresh token is expired or revoked — user must log in again
+            Self::clear_session();
+            return Err("Session expired. Please sign in again.".to_string());
+        }
+
+        let session: AuthSession = res.json()
+            .await
+            .map_err(|e| format!("Parse error: {}", e))?;
+
+        Self::persist_session(&session);
+        Ok(true)
     }
 
     pub async fn sign_out(&self) -> Result<(), String> {
@@ -283,4 +321,4 @@ impl SupabaseClient {
         let _ = LocalStorage::set("mms_refresh_token", &session.refresh_token);
         let _ = LocalStorage::set("mms_user_id",       &session.user.id);
     }
-}
+                }
