@@ -1,0 +1,91 @@
+/* styles/admin.css */
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.admin-layout { min-height: 100vh; background: var(--bg-base); }
+
+/* ── Header ─────────────────────────────────────────────────── */
+.admin-header {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 1rem 0;
+  position: sticky; top: 0; z-index: 50;
+}
+.admin-header-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.admin-header-brand  { display: flex; align-items: center; gap: 0.6rem; color: var(--cobalt-light); }
+.admin-header-title  { font-family: var(--font-display); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text-primary); }
+.admin-header-actions { display: flex; gap: 0.5rem; }
+
+/* ── Main ───────────────────────────────────────────────────── */
+.admin-main    { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+.admin-loading { display: flex; align-items: center; justify-content: center; padding: 5rem; }
+.admin-error   { padding: 2rem; }
+.admin-content { display: flex; flex-direction: column; gap: 2rem; }
+
+.admin-page-header { margin-bottom: 0.5rem; }
+.admin-page-title  { font-size: 1.6rem; color: var(--text-primary); margin-bottom: 0.35rem; }
+.admin-page-sub    { font-size: 0.9rem; color: var(--text-secondary); }
+
+/* ── Stats cards ────────────────────────────────────────────── */
+.admin-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+
+.admin-stat-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); padding: 1.5rem;
+  display: flex; align-items: center; gap: 1rem;
+  box-shadow: var(--card-shadow);
+}
+.admin-stat-icon {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cobalt-faint); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius); color: var(--cobalt-light); flex-shrink: 0;
+}
+.admin-stat-body  { display: flex; flex-direction: column; gap: 0.2rem; }
+.admin-stat-value {
+  font-family: var(--font-display); font-size: 1.75rem; font-weight: 700;
+  background: linear-gradient(90deg, var(--cobalt-light), var(--cyan-neon));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  line-height: 1;
+}
+.admin-stat-label { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ── User table ─────────────────────────────────────────────── */
+.user-table-wrap {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+.user-table-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.user-table-title  { font-size: 1rem; color: var(--text-primary); }
+.user-table-search { max-width: 280px; margin-bottom: 0; }
+.user-table-scroll { overflow-x: auto; }
+
+.user-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; min-width: 560px; }
+.user-table thead tr { background: var(--bg-surface); }
+.user-table th {
+  text-align: left; padding: 0.75rem 1.25rem;
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
+}
+
+.user-table-row        { border-bottom: 1px solid var(--border-subtle); }
+.user-table-row:last-child { border-bottom: none; }
+.user-table-row:hover td   { background: rgba(65,105,225,0.03); }
+.user-table-cell  { padding: 0.85rem 1.25rem; color: var(--text-secondary); vertical-align: middle; }
+.user-cell-name   { display: flex; align-items: center; gap: 0.75rem; color: var(--text-primary); font-weight: 500; }
+.user-cell-avatar { flex-shrink: 0; }
+.user-cell-date   { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-main { padding: 1.25rem; }
+  }
