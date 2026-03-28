@@ -24,6 +24,23 @@ struct RefreshBody {
 }
 
 #[derive(Serialize)]
+struct ResendBody {
+    #[serde(rename = "type")]
+    kind:  String,
+    email: String,
+}
+
+#[derive(Serialize)]
+struct RecoverBody {
+    email: String,
+}
+
+#[derive(Serialize)]
+struct UpdatePasswordBody {
+    password: String,
+}
+
+#[derive(Serialize)]
 struct UpdateProfileBody {
     display_name: Option<String>,
     bio:          Option<String>,
@@ -31,8 +48,7 @@ struct UpdateProfileBody {
     avatar_url:   Option<String>,
 }
 
-// Flexible signup response — access_token is absent when
-// Supabase requires email confirmation first.
+// Flexible signup response
 #[derive(Debug, Deserialize)]
 struct SignUpResponse {
     access_token:  Option<String>,
@@ -42,18 +58,19 @@ struct SignUpResponse {
     user:          Option<User>,
 }
 
-// ── Outcome returned to callers ────────────────────────────────
+// ── Outcome types ──────────────────────────────────────────────
 
 pub enum SignUpOutcome {
-    /// Signed in immediately — session persisted.
     LoggedIn,
-    /// Confirmation email sent — user must click link first.
     ConfirmationRequired,
 }
 
 // ── Auth methods ───────────────────────────────────────────────
 
 impl SupabaseClient {
+
+    // ── Sign up ────────────────────────────────────────────────
+
     pub async fn sign_up(
         &self,
         email:    &str,
@@ -106,6 +123,8 @@ impl SupabaseClient {
         Ok(SignUpOutcome::ConfirmationRequired)
     }
 
+    // ── Sign in ────────────────────────────────────────────────
+
     pub async fn sign_in(
         &self,
         email:    &str,
@@ -141,40 +160,7 @@ impl SupabaseClient {
         Ok(session)
     }
 
-    /// Attempt to renew the access token using the stored refresh token.
-    /// Returns Ok(true) if the session was refreshed and persisted.
-    /// Returns Ok(false) if there is no refresh token stored (first visit / logged out).
-    /// Returns Err if the refresh token is invalid/expired — caller should clear session.
-    pub async fn try_refresh_session(&self) -> Result<bool, String> {
-        let refresh_token = match LocalStorage::get::<String>("mms_refresh_token") {
-            Ok(t) if !t.is_empty() => t,
-            _ => return Ok(false), // nothing stored — not an error, just not logged in
-        };
-
-        let body = RefreshBody { refresh_token };
-
-        let res = Request::post(&self.auth_url("/token?grant_type=refresh_token"))
-            .header("apikey",       &self.anon_key)
-            .header("Content-Type", "application/json")
-            .json(&body)
-            .map_err(|e| format!("Request build error: {}", e))?
-            .send()
-            .await
-            .map_err(|e| format!("Network error: {}", e))?;
-
-        if !res.ok() {
-            // Refresh token is expired or revoked — user must log in again
-            Self::clear_session();
-            return Err("Session expired. Please sign in again.".to_string());
-        }
-
-        let session: AuthSession = res.json()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))?;
-
-        Self::persist_session(&session);
-        Ok(true)
-    }
+    // ── Sign out ───────────────────────────────────────────────
 
     pub async fn sign_out(&self) -> Result<(), String> {
         let token = LocalStorage::get::<String>("mms_access_token")
@@ -189,6 +175,179 @@ impl SupabaseClient {
         Self::clear_session();
         Ok(())
     }
+
+    // ── Resend email verification ──────────────────────────────
+    // Called when sign_in returns "Email not confirmed".
+
+    pub async fn resend_verification(&self, email: &str) -> Result<(), String> {
+        let body = ResendBody {
+            kind:  "signup".to_string(),
+            email: email.to_string(),
+        };
+
+        let res = Request::post(&self.auth_url("/resend"))
+            .header("apikey",       &self.anon_key)
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            let msg = serde_json::from_str::<SupabaseError>(&text)
+                .map(|e| e.message)
+                .unwrap_or(text);
+            return Err(msg);
+        }
+
+        Ok(())
+    }
+
+    // ── Forgot password — send recovery email ──────────────────
+    // Supabase sends an email with a magic link. When the user
+    // clicks it, they land back on the app with type=recovery in
+    // the URL hash. App.rs detects this and shows ResetPasswordForm.
+
+    pub async fn send_password_recovery(&self, email: &str) -> Result<(), String> {
+        // Build the redirect URL dynamically from the current origin
+        // so this works on both localhost and the production domain.
+        let origin = web_sys::window()
+            .and_then(|w| w.location().origin().ok())
+            .unwrap_or_default();
+
+        let body = RecoverBody {
+            email: email.to_string(),
+        };
+
+        // Supabase appends the recovery token to redirect_to as hash params.
+        let url = format!(
+            "{}&redirect_to={}",
+            self.auth_url("/recover"),
+            js_sys::encode_uri_component(&origin)
+        );
+
+        let res = Request::post(&url)
+            .header("apikey",       &self.anon_key)
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        // 200 = email sent (even if address doesn't exist — Supabase
+        // deliberately doesn't reveal whether an email exists).
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            let msg = serde_json::from_str::<SupabaseError>(&text)
+                .map(|e| e.message)
+                .unwrap_or(text);
+            return Err(msg);
+        }
+
+        Ok(())
+    }
+
+    // ── Reset password using recovery token ────────────────────
+    // The recovery_token comes from the URL hash after the user
+    // clicks the email link. It is NOT the stored session token.
+
+    pub async fn reset_password_with_token(
+        &self,
+        recovery_token: &str,
+        new_password:   &str,
+    ) -> Result<(), String> {
+        let body = UpdatePasswordBody {
+            password: new_password.to_string(),
+        };
+
+        let res = Request::put(&self.auth_url("/user"))
+            .header("apikey",        &self.anon_key)
+            .header("Authorization", &format!("Bearer {}", recovery_token))
+            .header("Content-Type",  "application/json")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            let msg = serde_json::from_str::<SupabaseError>(&text)
+                .map(|e| e.message)
+                .unwrap_or(text);
+            return Err(msg);
+        }
+
+        Ok(())
+    }
+
+    // ── Change password (logged-in user from settings) ─────────
+
+    pub async fn update_password(&self, new_password: &str) -> Result<(), String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let body = UpdatePasswordBody {
+            password: new_password.to_string(),
+        };
+
+        let res = Request::put(&self.auth_url("/user"))
+            .header("apikey",        &self.anon_key)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Content-Type",  "application/json")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            let msg = serde_json::from_str::<SupabaseError>(&text)
+                .map(|e| e.message)
+                .unwrap_or(text);
+            return Err(msg);
+        }
+
+        Ok(())
+    }
+
+    // ── Session refresh ────────────────────────────────────────
+
+    pub async fn try_refresh_session(&self) -> Result<bool, String> {
+        let refresh_token = match LocalStorage::get::<String>("mms_refresh_token") {
+            Ok(t) if !t.is_empty() => t,
+            _ => return Ok(false),
+        };
+
+        let body = RefreshBody { refresh_token };
+
+        let res = Request::post(&self.auth_url("/token?grant_type=refresh_token"))
+            .header("apikey",       &self.anon_key)
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            Self::clear_session();
+            return Err("Session expired. Please sign in again.".to_string());
+        }
+
+        let session: AuthSession = res.json()
+            .await
+            .map_err(|e| format!("Parse error: {}", e))?;
+
+        Self::persist_session(&session);
+        Ok(true)
+    }
+
+    // ── Profile methods ────────────────────────────────────────
 
     pub async fn get_user(&self) -> Result<User, String> {
         let token = LocalStorage::get::<String>("mms_access_token")
@@ -252,18 +411,9 @@ impl SupabaseClient {
         let token = LocalStorage::get::<String>("mms_access_token")
             .map_err(|_| "Not authenticated".to_string())?;
 
-        let body = UpdateProfileBody {
-            display_name,
-            bio,
-            website,
-            avatar_url,
-        };
+        let body = UpdateProfileBody { display_name, bio, website, avatar_url };
 
-        let url = format!(
-            "{}?id=eq.{}",
-            self.rest_url("profiles"),
-            user_id
-        );
+        let url = format!("{}?id=eq.{}", self.rest_url("profiles"), user_id);
 
         let res = Request::patch(&url)
             .header("apikey",        &self.anon_key)
@@ -314,11 +464,11 @@ impl SupabaseClient {
             .map_err(|e| format!("Parse error: {}", e))
     }
 
-    // ── Internal helpers ───────────────────────────────────────
+    // ── Session helpers ────────────────────────────────────────
 
     fn persist_session(session: &AuthSession) {
         let _ = LocalStorage::set("mms_access_token",  &session.access_token);
         let _ = LocalStorage::set("mms_refresh_token", &session.refresh_token);
         let _ = LocalStorage::set("mms_user_id",       &session.user.id);
     }
-                }
+        }
