@@ -1,13 +1,13 @@
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use gloo_storage::{LocalStorage, Storage};
 
 pub const SUPABASE_URL: &str = env!("SUPABASE_URL");
 pub const SUPABASE_ANON_KEY: &str = env!("SUPABASE_ANON_KEY");
 
+// reqwest::Client removed — gloo-net is stateless (no persistent client object needed).
+// Each request is constructed directly via gloo_net::http::Request.
 #[derive(Clone)]
 pub struct SupabaseClient {
-    pub(crate) client:   Client,
     pub(crate) url:      String,
     pub(crate) anon_key: String,
 }
@@ -15,7 +15,6 @@ pub struct SupabaseClient {
 impl SupabaseClient {
     pub fn new() -> Self {
         Self {
-            client:   Client::new(),
             url:      SUPABASE_URL.to_string(),
             anon_key: SUPABASE_ANON_KEY.to_string(),
         }
@@ -27,17 +26,6 @@ impl SupabaseClient {
 
     pub fn rest_url(&self, table: &str) -> String {
         format!("{}/rest/v1/{}", self.url, table)
-    }
-
-    pub fn get_stored_token() -> Option<String> {
-        LocalStorage::get::<String>("mms_access_token").ok()
-    }
-
-    pub fn get_auth_header() -> String {
-        match LocalStorage::get::<String>("mms_access_token") {
-            Ok(token) => format!("Bearer {}", token),
-            Err(_)    => format!("Bearer {}", SUPABASE_ANON_KEY),
-        }
     }
 
     pub fn is_logged_in() -> bool {
@@ -122,4 +110,4 @@ impl Profile {
 pub struct SupabaseError {
     pub message: String,
     pub error:   Option<String>,
-    }
+}
