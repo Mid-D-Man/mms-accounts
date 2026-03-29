@@ -1,3 +1,4 @@
+<!-- index.html — replace the single CSS link with one per file -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,12 +8,10 @@
   <meta name="description" content="MidManStudio Accounts — manage your MmS identity, studio access, and projects." />
   <meta name="theme-color" content="#040812" />
 
-  <!-- Open Graph -->
   <meta property="og:title"       content="MidManStudio Accounts" />
   <meta property="og:description" content="Your MmS identity in one place." />
   <meta property="og:type"        content="website" />
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -20,11 +19,17 @@
     rel="stylesheet"
   />
 
-  <!-- Trunk directives -->
+  <!-- Trunk directive — Rust/WASM -->
   <link data-trunk rel="rust" data-wasm-opt="z" />
-  <link data-trunk rel="css"  href="styles/main.css" />
 
-  <!-- Inline loading screen — visible until WASM mounts .mms-app -->
+  <!-- CSS — each file tagged individually so Trunk copies all of them to dist/ -->
+  <link data-trunk rel="css" href="styles/tokens.css" />
+  <link data-trunk rel="css" href="styles/components.css" />
+  <link data-trunk rel="css" href="styles/auth.css" />
+  <link data-trunk rel="css" href="styles/landing.css" />
+  <link data-trunk rel="css" href="styles/dashboard.css" />
+  <link data-trunk rel="css" href="styles/admin.css" />
+
   <style>
     html, body {
       margin: 0; padding: 0;
@@ -62,7 +67,7 @@
 
     .wasm-loading-bar {
       width: 120px; height: 1px;
-      background: rgba(65, 105, 225, 0.2);
+      background: rgba(65,105,225,0.2);
       border-radius: 1px; overflow: hidden;
     }
 
@@ -85,7 +90,6 @@
       text-transform: uppercase; color: #4a5880;
     }
 
-    /* Dismiss once Leptos mounts the root element */
     body:has(.mms-app) .wasm-loading { display: none; }
   </style>
 </head>
@@ -100,6 +104,5 @@
     </div>
     <div class="wasm-loading-label">Initializing</div>
   </div>
-  <!-- Leptos mounts here -->
 </body>
 </html>
