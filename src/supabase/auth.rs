@@ -177,7 +177,6 @@ impl SupabaseClient {
     }
 
     // ── Resend email verification ──────────────────────────────
-    // Called when sign_in returns "Email not confirmed".
 
     pub async fn resend_verification(&self, email: &str) -> Result<(), String> {
         let body = ResendBody {
@@ -206,13 +205,8 @@ impl SupabaseClient {
     }
 
     // ── Forgot password — send recovery email ──────────────────
-    // Supabase sends an email with a magic link. When the user
-    // clicks it, they land back on the app with type=recovery in
-    // the URL hash. App.rs detects this and shows ResetPasswordForm.
 
     pub async fn send_password_recovery(&self, email: &str) -> Result<(), String> {
-        // Build the redirect URL dynamically from the current origin
-        // so this works on both localhost and the production domain.
         let origin = web_sys::window()
             .and_then(|w| w.location().origin().ok())
             .unwrap_or_default();
@@ -221,9 +215,9 @@ impl SupabaseClient {
             email: email.to_string(),
         };
 
-        // Supabase appends the recovery token to redirect_to as hash params.
+        // Fixed: use ? not & before redirect_to
         let url = format!(
-            "{}&redirect_to={}",
+            "{}?redirect_to={}",
             self.auth_url("/recover"),
             js_sys::encode_uri_component(&origin)
         );
@@ -237,8 +231,6 @@ impl SupabaseClient {
             .await
             .map_err(|e| format!("Network error: {}", e))?;
 
-        // 200 = email sent (even if address doesn't exist — Supabase
-        // deliberately doesn't reveal whether an email exists).
         if !res.ok() {
             let text = res.text().await.unwrap_or_default();
             let msg = serde_json::from_str::<SupabaseError>(&text)
@@ -251,8 +243,6 @@ impl SupabaseClient {
     }
 
     // ── Reset password using recovery token ────────────────────
-    // The recovery_token comes from the URL hash after the user
-    // clicks the email link. It is NOT the stored session token.
 
     pub async fn reset_password_with_token(
         &self,
@@ -471,4 +461,4 @@ impl SupabaseClient {
         let _ = LocalStorage::set("mms_refresh_token", &session.refresh_token);
         let _ = LocalStorage::set("mms_user_id",       &session.user.id);
     }
-        }
+}
