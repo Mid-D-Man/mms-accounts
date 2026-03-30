@@ -38,8 +38,24 @@ pub fn DashboardSidebar(
         <aside class="dash-sidebar">
             // Brand
             <div class="dash-sidebar-brand">
-                <span class="brand-mms">"MmS"</span>
-                <span class="brand-accounts">"Accounts"</span>
+                <img
+                    src="/logo.png"
+                    alt="MidManStudio"
+                    class="dash-sidebar-logo"
+                    // Falls back gracefully if logo.png not yet added
+                    on:error=move |ev| {
+                        use wasm_bindgen::JsCast;
+                        if let Some(img) = ev.target()
+                            .and_then(|t| t.dyn_into::<web_sys::HtmlImageElement>().ok())
+                        {
+                            img.style().set_property("display", "none").ok();
+                        }
+                    }
+                />
+                <div class="dash-sidebar-brand-text">
+                    <span class="brand-mms">"MmS"</span>
+                    <span class="brand-accounts">"Accounts"</span>
+                </div>
             </div>
 
             // User info
@@ -77,16 +93,12 @@ pub fn DashboardSidebar(
                 </div>
             </div>
 
-            // Nav items
+            // Nav
             <nav class="dash-nav">
                 <button
-                    class=move || {
-                        if active_view.get() == DashView::Overview {
-                            "dash-nav-item dash-nav-item--active"
-                        } else {
-                            "dash-nav-item"
-                        }
-                    }
+                    class=move || if active_view.get() == DashView::Overview {
+                        "dash-nav-item dash-nav-item--active"
+                    } else { "dash-nav-item" }
                     on:click=on_navigate_overview
                 >
                     <IconHome class="icon-svg icon-sm" />
@@ -94,13 +106,9 @@ pub fn DashboardSidebar(
                 </button>
 
                 <button
-                    class=move || {
-                        if active_view.get() == DashView::Profile {
-                            "dash-nav-item dash-nav-item--active"
-                        } else {
-                            "dash-nav-item"
-                        }
-                    }
+                    class=move || if active_view.get() == DashView::Profile {
+                        "dash-nav-item dash-nav-item--active"
+                    } else { "dash-nav-item" }
                     on:click=on_navigate_profile
                 >
                     <IconUser class="icon-svg icon-sm" />
@@ -108,13 +116,9 @@ pub fn DashboardSidebar(
                 </button>
 
                 <button
-                    class=move || {
-                        if active_view.get() == DashView::Settings {
-                            "dash-nav-item dash-nav-item--active"
-                        } else {
-                            "dash-nav-item"
-                        }
-                    }
+                    class=move || if active_view.get() == DashView::Settings {
+                        "dash-nav-item dash-nav-item--active"
+                    } else { "dash-nav-item" }
                     on:click=on_navigate_settings
                 >
                     <IconSettings class="icon-svg icon-sm" />
@@ -142,4 +146,4 @@ pub fn DashboardSidebar(
             </div>
         </aside>
     }
-  }
+}
