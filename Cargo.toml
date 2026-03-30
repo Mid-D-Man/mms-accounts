@@ -24,6 +24,7 @@ web-sys = { version = "0.3", features = [
   "HtmlInputElement",
   "HtmlTextAreaElement",
   "HtmlSelectElement",
+  "HtmlImageElement",
   # Storage
   "Storage",
   # Events
@@ -37,10 +38,9 @@ web-sys = { version = "0.3", features = [
   # Navigation
   "Location",
   "History",
-  # Intersection observer (scroll reveal)
-  "IntersectionObserver",
-  "IntersectionObserverEntry",
-  "IntersectionObserverInit",
+  # Crypto — for secret generation and SHA-256 hashing
+  "Crypto",
+  "SubtleCrypto",
   # DOM
   "DomTokenList",
   "NodeList",
@@ -48,19 +48,18 @@ web-sys = { version = "0.3", features = [
   # Scroll
   "ScrollToOptions",
   "ScrollBehavior",
+  # Clipboard
+  "Clipboard",
+  "Navigator",
 ] }
 
-# HTTP — gloo-net uses the browser's native fetch API directly (no AbortController fragility)
-# reqwest 0.11 was replaced because its internal AbortController gets signalled when
-# the WASM future is dropped during Leptos reactive re-renders, producing NS_BINDING_ABORTED.
 gloo-net = { version = "0.6", features = ["http", "json"] }
 
-# Serialization
 serde       = { version = "1.0", features = ["derive"] }
 serde_json  = "1.0"
 
-# Browser storage (localStorage for JWT)
 gloo-storage = "0.3"
+gloo-timers  = { version = "0.3", features = ["futures"] }
 
 [profile.release]
 opt-level     = "s"
