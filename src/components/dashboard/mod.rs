@@ -3,12 +3,14 @@ pub mod header;
 pub mod overview;
 pub mod profile;
 pub mod settings;
+pub mod credentials;
 
 pub use sidebar::*;
 pub use header::*;
 pub use overview::*;
 pub use profile::*;
 pub use settings::*;
+pub use credentials::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -20,6 +22,7 @@ pub enum DashView {
     Overview,
     Profile,
     Settings,
+    Credentials,
 }
 
 #[component]
@@ -38,12 +41,10 @@ pub fn DashboardPage() -> impl IntoView {
     Effect::new(move |_| {
         let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
             .unwrap_or_default();
-
         if user_id.is_empty() {
             set_loading.set(false);
             return;
         }
-
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.get_profile(&user_id).await {
@@ -68,10 +69,8 @@ pub fn DashboardPage() -> impl IntoView {
                 on_navigate=move |v| set_active_view.set(v)
                 profile=profile
             />
-
             <div class="dashboard-main">
                 <DashboardHeader profile=profile />
-
                 <main class="dashboard-content">
                     {move || if loading.get() {
                         view! {
@@ -94,6 +93,9 @@ pub fn DashboardPage() -> impl IntoView {
                             }.into_any(),
                             DashView::Settings => view! {
                                 <SettingsView />
+                            }.into_any(),
+                            DashView::Credentials => view! {
+                                <CredentialsView profile=profile />
                             }.into_any(),
                         }
                     }}
