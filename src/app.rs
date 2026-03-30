@@ -1,8 +1,7 @@
-// src/app.rs
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use gloo_storage::Storage; // ← THIS was missing; enables .set() / .get() / .delete()
+use gloo_storage::Storage;
 use std::collections::HashMap;
 
 use crate::components::{
@@ -13,8 +12,6 @@ use crate::components::{
 };
 use crate::supabase::{SupabaseClient, User};
 use crate::supabase::client::{SUPABASE_URL, SUPABASE_ANON_KEY};
-
-// ── Route enum ─────────────────────────────────────────────────
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Route {
@@ -45,7 +42,7 @@ impl Route {
     }
 }
 
-// ── Hash fragment parser ───────────────────────────────────────
+// ── Hash fragment parser — URI-decodes values to fix JWT corruption ──
 
 fn parse_hash_params() -> HashMap<String, String> {
     let hash = web_sys::window()
@@ -57,13 +54,17 @@ fn parse_hash_params() -> HashMap<String, String> {
 
     for pair in fragment.split('&') {
         if let Some((k, v)) = pair.split_once('=') {
-            map.insert(k.to_string(), v.to_string());
+            // URI-decode the value — without this, URL-encoded JWT tokens
+            // arrive malformed (e.g. %2B instead of +) and fail signature checks
+            let decoded_v = js_sys::decode_uri_component(v)
+                .ok()
+                .and_then(|jv| jv.as_string())
+                .unwrap_or_else(|| v.to_string());
+            map.insert(k.to_string(), decoded_v);
         }
     }
     map
 }
-
-// ── App root ───────────────────────────────────────────────────
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -147,7 +148,6 @@ pub fn App() -> impl IntoView {
         });
     });
 
-    // ── Hash-change listener ───────────────────────────────────
     Effect::new(move |_| {
         if let Some(window) = web_sys::window() {
             let set_r = set_route.clone();
@@ -194,8 +194,6 @@ pub fn App() -> impl IntoView {
         </div>
     }
 }
-
-// ── Helpers ────────────────────────────────────────────────────
 
 fn get_current_route() -> Route {
     let hash = web_sys::window()
