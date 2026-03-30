@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use crate::supabase::Profile;
 use crate::components::icons::{
-    IconHome, IconUser, IconSettings, IconLogOut, IconShield,
+    IconHome, IconUser, IconSettings, IconLogOut, IconShield, IconKey,
 };
 use super::DashView;
 
@@ -11,18 +11,12 @@ pub fn DashboardSidebar(
     on_navigate: impl Fn(DashView) + 'static + Clone,
     profile:     ReadSignal<Option<Profile>>,
 ) -> impl IntoView {
-    let on_navigate_overview = {
-        let on_navigate = on_navigate.clone();
-        move |_| on_navigate(DashView::Overview)
-    };
-    let on_navigate_profile = {
-        let on_navigate = on_navigate.clone();
-        move |_| on_navigate(DashView::Profile)
-    };
-    let on_navigate_settings = {
-        let on_navigate = on_navigate.clone();
-        move |_| on_navigate(DashView::Settings)
-    };
+    let nav = std::sync::Arc::new(on_navigate);
+
+    let nav_overview     = { let n = nav.clone(); move |_| n(DashView::Overview)     };
+    let nav_profile      = { let n = nav.clone(); move |_| n(DashView::Profile)      };
+    let nav_credentials  = { let n = nav.clone(); move |_| n(DashView::Credentials)  };
+    let nav_settings     = { let n = nav.clone(); move |_| n(DashView::Settings)     };
 
     let handle_signout = move |_| {
         let client = crate::supabase::SupabaseClient::new();
@@ -36,20 +30,19 @@ pub fn DashboardSidebar(
 
     view! {
         <aside class="dash-sidebar">
-            // Brand
+
+            // ── Brand ──────────────────────────────────────────
             <div class="dash-sidebar-brand">
                 <img
                     src="/logo.png"
                     alt="MidManStudio"
                     class="dash-sidebar-logo"
-                    // Falls back gracefully if logo.png not yet added
                     on:error=move |ev| {
                         use wasm_bindgen::JsCast;
                         if let Some(img) = ev.target()
                             .and_then(|t| t.dyn_into::<web_sys::HtmlImageElement>().ok())
                         {
-                            // FIXED: Use set_attribute to avoid trait conflict with Leptos' ElementExt
-                            img.set_attribute("style", "display: none").ok();
+                            img.style().set_property("display", "none").ok();
                         }
                     }
                 />
@@ -59,7 +52,7 @@ pub fn DashboardSidebar(
                 </div>
             </div>
 
-            // User info
+            // ── User info ──────────────────────────────────────
             <div class="dash-sidebar-user">
                 <div class="sidebar-avatar">
                     {move || {
@@ -94,13 +87,13 @@ pub fn DashboardSidebar(
                 </div>
             </div>
 
-            // Nav
+            // ── Nav ────────────────────────────────────────────
             <nav class="dash-nav">
                 <button
                     class=move || if active_view.get() == DashView::Overview {
                         "dash-nav-item dash-nav-item--active"
                     } else { "dash-nav-item" }
-                    on:click=on_navigate_overview
+                    on:click=nav_overview
                 >
                     <IconHome class="icon-svg icon-sm" />
                     <span>"Overview"</span>
@@ -110,24 +103,34 @@ pub fn DashboardSidebar(
                     class=move || if active_view.get() == DashView::Profile {
                         "dash-nav-item dash-nav-item--active"
                     } else { "dash-nav-item" }
-                    on:click=on_navigate_profile
+                    on:click=nav_profile
                 >
                     <IconUser class="icon-svg icon-sm" />
                     <span>"Profile"</span>
                 </button>
 
                 <button
+                    class=move || if active_view.get() == DashView::Credentials {
+                        "dash-nav-item dash-nav-item--active"
+                    } else { "dash-nav-item" }
+                    on:click=nav_credentials
+                >
+                    <IconKey class="icon-svg icon-sm" />
+                    <span>"Credentials"</span>
+                </button>
+
+                <button
                     class=move || if active_view.get() == DashView::Settings {
                         "dash-nav-item dash-nav-item--active"
                     } else { "dash-nav-item" }
-                    on:click=on_navigate_settings
+                    on:click=nav_settings
                 >
                     <IconSettings class="icon-svg icon-sm" />
                     <span>"Settings"</span>
                 </button>
             </nav>
 
-            // Bottom
+            // ── Bottom ─────────────────────────────────────────
             <div class="dash-sidebar-bottom">
                 {move || if profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false) {
                     view! {
@@ -145,6 +148,7 @@ pub fn DashboardSidebar(
                     <span>"Sign Out"</span>
                 </button>
             </div>
+
         </aside>
     }
 }
