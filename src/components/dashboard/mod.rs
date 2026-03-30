@@ -2,11 +2,13 @@ pub mod sidebar;
 pub mod header;
 pub mod overview;
 pub mod profile;
+pub mod settings;
 
 pub use sidebar::*;
 pub use header::*;
 pub use overview::*;
 pub use profile::*;
+pub use settings::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -29,9 +31,9 @@ pub fn DashboardPage() -> impl IntoView {
         return view! { <div></div> }.into_any();
     }
 
-    let (profile,      set_profile)      = signal(None::<Profile>);
-    let (loading,      set_loading)      = signal(true);
-    let (active_view,  set_active_view)  = signal(DashView::Overview);
+    let (profile,     set_profile)     = signal(None::<Profile>);
+    let (loading,     set_loading)     = signal(true);
+    let (active_view, set_active_view) = signal(DashView::Overview);
 
     Effect::new(move |_| {
         let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
@@ -43,10 +45,9 @@ pub fn DashboardPage() -> impl IntoView {
         }
 
         let client = SupabaseClient::new();
-
         spawn_local(async move {
             match client.get_profile(&user_id).await {
-                Ok(p)  => {
+                Ok(p) => {
                     set_profile.set(Some(p));
                     set_loading.set(false);
                 }
@@ -85,11 +86,14 @@ pub fn DashboardPage() -> impl IntoView {
                             DashView::Overview => view! {
                                 <OverviewView profile=profile />
                             }.into_any(),
-                            DashView::Profile | DashView::Settings => view! {
+                            DashView::Profile => view! {
                                 <ProfileView
                                     profile=profile
                                     on_updated=move |p| set_profile.set(Some(p))
                                 />
+                            }.into_any(),
+                            DashView::Settings => view! {
+                                <SettingsView />
                             }.into_any(),
                         }
                     }}
@@ -97,4 +101,4 @@ pub fn DashboardPage() -> impl IntoView {
             </div>
         </div>
     }.into_any()
-                        }
+}
