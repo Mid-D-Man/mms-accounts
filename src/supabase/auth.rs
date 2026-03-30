@@ -2,6 +2,9 @@ use super::client::*;
 use serde::{Deserialize, Serialize};
 use gloo_storage::{LocalStorage, Storage};
 use gloo_net::http::Request;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::JsFuture;
+use js_sys::{ArrayBuffer, Uint8Array};
 
 // ── Request bodies ─────────────────────────────────────────────
 
@@ -48,6 +51,20 @@ struct UpdateProfileBody {
     avatar_url:   Option<String>,
 }
 
+#[derive(Serialize)]
+struct CreateSecretBody {
+    user_id:       String,
+    mid_id:        String,
+    secret_hash:   String,
+    secret_prefix: String,
+    label:         Option<String>,
+}
+
+#[derive(Serialize)]
+struct RevokeSecretBody {
+    is_active: bool,
+}
+
 // Flexible signup response
 #[derive(Debug, Deserialize)]
 struct SignUpResponse {
@@ -63,6 +80,76 @@ struct SignUpResponse {
 pub enum SignUpOutcome {
     LoggedIn,
     ConfirmationRequired,
+}
+
+// ── Crypto helpers ─────────────────────────────────────────────
+
+/// Generate a cryptographically secure random secret string.
+/// Returns (full_secret, display_prefix, sha256_hash_hex)
+pub async fn generate_mid_secret() -> Result<(String, String, String), String> {
+    let window = web_sys::window().ok_or("No window")?;
+    let crypto = window.crypto().map_err(|_| "No crypto")?;
+
+    // Generate 32 random bytes
+    let array = Uint8Array::new_with_length(32);
+    crypto
+        .get_random_values_with_js_value(&array)
+        .map_err(|_| "Failed to generate random bytes")?;
+
+    // Encode as alphanumeric string using the random bytes
+    let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let bytes: Vec<u8> = array.to_vec();
+    let body: String = bytes
+        .iter()
+        .map(|b| charset[(*b as usize) % charset.len()] as char)
+        .collect();
+
+    let full_secret  = format!("mids_{}", body);
+    // Prefix = "mids_" + first 8 chars of body — shown in the list after creation
+    let prefix       = format!("mids_{}", &body[..8]);
+
+    // SHA-256 hash of the full secret via SubtleCrypto
+    let hash_hex = sha256_hex(full_secret.as_bytes()).await?;
+
+    Ok((full_secret, prefix, hash_hex))
+}
+
+/// SHA-256 a byte slice using the browser SubtleCrypto API.
+/// Returns lowercase hex string.
+async fn sha256_hex(data: &[u8]) -> Result<String, String> {
+    let window  = web_sys::window().ok_or("No window")?;
+    let crypto  = window.crypto().map_err(|_| "No crypto")?;
+    let subtle  = crypto.subtle();
+
+    let data_array = Uint8Array::from(data);
+
+    let promise = subtle
+        .digest_with_str_and_buffer_source("SHA-256", &data_array)
+        .map_err(|_| "SubtleCrypto.digest failed")?;
+
+    let result = JsFuture::from(promise)
+        .await
+        .map_err(|_| "SHA-256 promise rejected")?;
+
+    let hash_buffer  = ArrayBuffer::from(result);
+    let hash_bytes   = Uint8Array::new(&hash_buffer);
+    let bytes: Vec<u8> = hash_bytes.to_vec();
+
+    Ok(bytes.iter().map(|b| format!("{:02x}", b)).collect())
+}
+
+/// Copy text to clipboard using the Clipboard API.
+pub async fn copy_to_clipboard(text: &str) -> Result<(), String> {
+    let window    = web_sys::window().ok_or("No window")?;
+    let navigator = window.navigator();
+    let clipboard = navigator.clipboard();
+
+    let promise = clipboard.write_text(text);
+    JsFuture::from(promise)
+        .await
+        .map_err(|_| "Clipboard write failed")?;
+
+    Ok(())
 }
 
 // ── Auth methods ───────────────────────────────────────────────
@@ -204,7 +291,7 @@ impl SupabaseClient {
         Ok(())
     }
 
-    // ── Forgot password — send recovery email ──────────────────
+    // ── Forgot password ────────────────────────────────────────
 
     pub async fn send_password_recovery(&self, email: &str) -> Result<(), String> {
         let origin = web_sys::window()
@@ -215,7 +302,6 @@ impl SupabaseClient {
             email: email.to_string(),
         };
 
-        // Fixed: use ? not & before redirect_to
         let url = format!(
             "{}?redirect_to={}",
             self.auth_url("/recover"),
@@ -242,7 +328,7 @@ impl SupabaseClient {
         Ok(())
     }
 
-    // ── Reset password using recovery token ────────────────────
+    // ── Reset password with recovery token ────────────────────
 
     pub async fn reset_password_with_token(
         &self,
@@ -274,7 +360,7 @@ impl SupabaseClient {
         Ok(())
     }
 
-    // ── Change password (logged-in user from settings) ─────────
+    // ── Update password (logged in) ────────────────────────────
 
     pub async fn update_password(&self, new_password: &str) -> Result<(), String> {
         let token = LocalStorage::get::<String>("mms_access_token")
@@ -452,6 +538,118 @@ impl SupabaseClient {
         res.json::<Vec<Profile>>()
             .await
             .map_err(|e| format!("Parse error: {}", e))
+    }
+
+    // ── MID Secret methods ─────────────────────────────────────
+
+    /// List all active secrets for a user.
+    pub async fn list_secrets(&self, user_id: &str) -> Result<Vec<MidSecret>, String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let url = format!(
+            "{}?user_id=eq.{}&is_active=eq.true&order=created_at.desc&select=*",
+            self.rest_url("mid_secrets"),
+            user_id
+        );
+
+        let res = Request::get(&url)
+            .header("apikey",        &self.anon_key)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Accept",        "application/json")
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Failed to fetch secrets: {}", text));
+        }
+
+        res.json::<Vec<MidSecret>>()
+            .await
+            .map_err(|e| format!("Parse error: {}", e))
+    }
+
+    /// Create a new secret. The caller is responsible for generating
+    /// the hash and prefix via generate_mid_secret() before calling this.
+    pub async fn create_secret(
+        &self,
+        user_id:       &str,
+        mid_id:        &str,
+        label:         Option<String>,
+        secret_hash:   &str,
+        secret_prefix: &str,
+    ) -> Result<MidSecret, String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let body = CreateSecretBody {
+            user_id:       user_id.to_string(),
+            mid_id:        mid_id.to_string(),
+            secret_hash:   secret_hash.to_string(),
+            secret_prefix: secret_prefix.to_string(),
+            label,
+        };
+
+        let res = Request::post(&self.rest_url("mid_secrets"))
+            .header("apikey",        &self.anon_key)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Prefer",        "return=representation")
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Failed to create secret: {}", text));
+        }
+
+        let secrets: Vec<MidSecret> = res.json()
+            .await
+            .map_err(|e| format!("Parse error: {}", e))?;
+
+        secrets.into_iter().next()
+            .ok_or_else(|| "No secret returned".to_string())
+    }
+
+    /// Revoke a secret by setting is_active = false.
+    /// Hard deletes are intentionally avoided for audit purposes.
+    pub async fn revoke_secret(
+        &self,
+        secret_id: &str,
+        user_id:   &str,
+    ) -> Result<(), String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let body = RevokeSecretBody { is_active: false };
+
+        // user_id filter ensures users can only revoke their own secrets
+        let url = format!(
+            "{}?id=eq.{}&user_id=eq.{}",
+            self.rest_url("mid_secrets"),
+            secret_id,
+            user_id
+        );
+
+        let res = Request::patch(&url)
+            .header("apikey",        &self.anon_key)
+            .header("Authorization", &format!("Bearer {}", token))
+            .json(&body)
+            .map_err(|e| format!("Request build error: {}", e))?
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Failed to revoke secret: {}", text));
+        }
+
+        Ok(())
     }
 
     // ── Session helpers ────────────────────────────────────────
