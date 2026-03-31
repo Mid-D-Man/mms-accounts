@@ -2,7 +2,6 @@ use super::client::*;
 use serde::{Deserialize, Serialize};
 use gloo_storage::{LocalStorage, Storage};
 use gloo_net::http::Request;
-use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use js_sys::{ArrayBuffer, Uint8Array};
 
@@ -93,7 +92,7 @@ pub async fn generate_mid_secret() -> Result<(String, String, String), String> {
     // Generate 32 random bytes
     let array = Uint8Array::new_with_length(32);
     crypto
-        .get_random_values_with_js_value(&array)
+        .get_random_values_with_js_u8_array(&array)
         .map_err(|_| "Failed to generate random bytes")?;
 
     // Encode as alphanumeric string using the random bytes
@@ -105,10 +104,8 @@ pub async fn generate_mid_secret() -> Result<(String, String, String), String> {
         .collect();
 
     let full_secret  = format!("mids_{}", body);
-    // Prefix = "mids_" + first 8 chars of body — shown in the list after creation
     let prefix       = format!("mids_{}", &body[..8]);
 
-    // SHA-256 hash of the full secret via SubtleCrypto
     let hash_hex = sha256_hex(full_secret.as_bytes()).await?;
 
     Ok((full_secret, prefix, hash_hex))
@@ -542,7 +539,6 @@ impl SupabaseClient {
 
     // ── MID Secret methods ─────────────────────────────────────
 
-    /// List all active secrets for a user.
     pub async fn list_secrets(&self, user_id: &str) -> Result<Vec<MidSecret>, String> {
         let token = LocalStorage::get::<String>("mms_access_token")
             .map_err(|_| "Not authenticated".to_string())?;
@@ -571,8 +567,6 @@ impl SupabaseClient {
             .map_err(|e| format!("Parse error: {}", e))
     }
 
-    /// Create a new secret. The caller is responsible for generating
-    /// the hash and prefix via generate_mid_secret() before calling this.
     pub async fn create_secret(
         &self,
         user_id:       &str,
@@ -615,8 +609,6 @@ impl SupabaseClient {
             .ok_or_else(|| "No secret returned".to_string())
     }
 
-    /// Revoke a secret by setting is_active = false.
-    /// Hard deletes are intentionally avoided for audit purposes.
     pub async fn revoke_secret(
         &self,
         secret_id: &str,
@@ -627,7 +619,6 @@ impl SupabaseClient {
 
         let body = RevokeSecretBody { is_active: false };
 
-        // user_id filter ensures users can only revoke their own secrets
         let url = format!(
             "{}?id=eq.{}&user_id=eq.{}",
             self.rest_url("mid_secrets"),
