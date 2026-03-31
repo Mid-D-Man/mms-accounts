@@ -1,7 +1,8 @@
+// src/components/dashboard/credentials.rs
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use gloo_storage::Storage;
-use std::rc::Rc;
+use std::sync::Arc;
 use crate::supabase::{SupabaseClient, MidSecret, Profile, generate_mid_secret, copy_to_clipboard};
 use crate::components::icons::{
     IconKey, IconCopy, IconCheck, IconLoader, IconPlus, IconTrash, IconAlertTriangle,
@@ -361,110 +362,113 @@ pub fn CredentialsView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                 } else {
                     view! {
                         <div class="secrets-list">
-                            {move || secrets.get().into_iter().map(|secret| {
-                                // Use Rc so the single ID allocation can be shared
-                                // across multiple closures without repeated cloning.
-                                let secret_rc           = Rc::new(secret.id.clone());
-                                let handle_revoke_clone = handle_revoke.clone();
+                            {move || {
+                                // Snapshot the handle_revoke closure in an Arc so
+                                // each per-row reactive closure can clone it cheaply
+                                // without capturing a non-Send Rc.
+                                let revoke = Arc::new(handle_revoke.clone());
 
-                                view! {
-                                    <div class="secret-row">
-                                        <div class="secret-row-left">
-                                            <div class="secret-row-icon">
-                                                <IconKey class="icon-svg icon-xs" />
+                                secrets.get().into_iter().map(|secret| {
+                                    // Arc<String> is Send — safe to capture in
+                                    // a Leptos reactive closure.
+                                    let sid: Arc<String> = Arc::new(secret.id.clone());
+                                    let revoke = revoke.clone();
+
+                                    view! {
+                                        <div class="secret-row">
+                                            <div class="secret-row-left">
+                                                <div class="secret-row-icon">
+                                                    <IconKey class="icon-svg icon-xs" />
+                                                </div>
+                                                <div class="secret-row-info">
+                                                    <span class="secret-label">
+                                                        {secret.display_label()}
+                                                    </span>
+                                                    <code class="secret-prefix">
+                                                        {secret.display_prefix()}
+                                                    </code>
+                                                </div>
                                             </div>
-                                            <div class="secret-row-info">
-                                                <span class="secret-label">
-                                                    {secret.display_label()}
+                                            <div class="secret-row-meta">
+                                                <span class="secret-meta-item">
+                                                    <span class="secret-meta-label">"Created"</span>
+                                                    <span class="secret-meta-value">
+                                                        {secret.formatted_created()}
+                                                    </span>
                                                 </span>
-                                                <code class="secret-prefix">
-                                                    {secret.display_prefix()}
-                                                </code>
+                                                <span class="secret-meta-item">
+                                                    <span class="secret-meta-label">"Last used"</span>
+                                                    <span class="secret-meta-value">
+                                                        {secret.formatted_last_used()}
+                                                    </span>
+                                                </span>
                                             </div>
-                                        </div>
-                                        <div class="secret-row-meta">
-                                            <span class="secret-meta-item">
-                                                <span class="secret-meta-label">"Created"</span>
-                                                <span class="secret-meta-value">
-                                                    {secret.formatted_created()}
-                                                </span>
-                                            </span>
-                                            <span class="secret-meta-item">
-                                                <span class="secret-meta-label">"Last used"</span>
-                                                <span class="secret-meta-value">
-                                                    {secret.formatted_last_used()}
-                                                </span>
-                                            </span>
-                                        </div>
-                                        <div class="secret-row-actions">
-                                            // ── FIX: compute confirming/revoking as plain
-                                            // bools inside the reactive closure rather than
-                                            // as FnOnce sub-closures that can only be moved once.
-                                            {
-                                                let sid = secret_rc.clone();
-                                                move || {
-                                                    let is_confirming   = confirm_revoke.get().as_deref() == Some(sid.as_str());
-                                                    let is_revoking_now = revoking_id.get().as_deref()    == Some(sid.as_str());
+                                            <div class="secret-row-actions">
+                                                {
+                                                    let sid = sid.clone();
+                                                    let revoke = revoke.clone();
+                                                    move || {
+                                                        let is_confirming   = confirm_revoke.get().as_deref() == Some(sid.as_str());
+                                                        let is_revoking_now = revoking_id.get().as_deref()    == Some(sid.as_str());
 
-                                                    if is_confirming {
-                                                        // Clone what we need for click handlers —
-                                                        // these are fresh clones each reactive run.
-                                                        let hrv   = handle_revoke_clone.clone();
-                                                        let sid_r = (*sid).clone();
-                                                        let sid_c = (*sid).clone();
+                                                        if is_confirming {
+                                                            let sid_confirm = (*sid).clone();
+                                                            let sid_cancel  = (*sid).clone();
+                                                            let revoke      = revoke.clone();
 
-                                                        view! {
-                                                            <span class="revoke-confirm-label">
-                                                                "Revoke this secret?"
-                                                            </span>
-                                                            <button
-                                                                class="btn btn-danger btn-sm"
-                                                                disabled=is_revoking_now
-                                                                on:click=move |_| hrv(sid_r.clone())
-                                                            >
-                                                                {if is_revoking_now {
-                                                                    view! {
-                                                                        <IconLoader class="icon-svg spin" />
-                                                                        <span>"Revoking..."</span>
-                                                                    }.into_any()
-                                                                } else {
-                                                                    view! {
-                                                                        <span>"Yes, revoke"</span>
-                                                                    }.into_any()
-                                                                }}
-                                                            </button>
-                                                            <button
-                                                                class="btn btn-ghost btn-sm"
-                                                                on:click=move |_| {
-                                                                    if confirm_revoke.get().as_deref() == Some(sid_c.as_str()) {
-                                                                        set_confirm_revoke.set(None);
+                                                            view! {
+                                                                <span class="revoke-confirm-label">
+                                                                    "Revoke this secret?"
+                                                                </span>
+                                                                <button
+                                                                    class="btn btn-danger btn-sm"
+                                                                    disabled=is_revoking_now
+                                                                    on:click=move |_| revoke(sid_confirm.clone())
+                                                                >
+                                                                    {if is_revoking_now {
+                                                                        view! {
+                                                                            <IconLoader class="icon-svg spin" />
+                                                                            <span>"Revoking..."</span>
+                                                                        }.into_any()
+                                                                    } else {
+                                                                        view! {
+                                                                            <span>"Yes, revoke"</span>
+                                                                        }.into_any()
+                                                                    }}
+                                                                </button>
+                                                                <button
+                                                                    class="btn btn-ghost btn-sm"
+                                                                    on:click=move |_| {
+                                                                        if confirm_revoke.get().as_deref() == Some(sid_cancel.as_str()) {
+                                                                            set_confirm_revoke.set(None);
+                                                                        }
                                                                     }
-                                                                }
-                                                            >
-                                                                "Cancel"
-                                                            </button>
-                                                        }.into_any()
-                                                    } else {
-                                                        let sid_click = (*sid).clone();
-                                                        view! {
-                                                            <button
-                                                                class="revoke-btn"
-                                                                title="Revoke secret"
-                                                                on:click=move |_| {
-                                                                    set_confirm_revoke.set(Some(sid_click.clone()))
-                                                                }
-                                                            >
-                                                                <IconTrash class="icon-svg icon-xs" />
-                                                                "Revoke"
-                                                            </button>
-                                                        }.into_any()
+                                                                >
+                                                                    "Cancel"
+                                                                </button>
+                                                            }.into_any()
+                                                        } else {
+                                                            let sid_click = (*sid).clone();
+                                                            view! {
+                                                                <button
+                                                                    class="revoke-btn"
+                                                                    title="Revoke secret"
+                                                                    on:click=move |_| {
+                                                                        set_confirm_revoke.set(Some(sid_click.clone()))
+                                                                    }
+                                                                >
+                                                                    <IconTrash class="icon-svg icon-xs" />
+                                                                    "Revoke"
+                                                                </button>
+                                                            }.into_any()
+                                                        }
                                                     }
                                                 }
-                                            }
+                                            </div>
                                         </div>
-                                    </div>
-                                }
-                            }).collect_view()}
+                                    }
+                                }).collect_view()
+                            }}
                         </div>
                     }.into_any()
                 }}
@@ -511,4 +515,4 @@ pub fn CredentialsView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
 
         </div>
     }
-}
+                    }
