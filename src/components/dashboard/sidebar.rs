@@ -42,7 +42,8 @@ pub fn DashboardSidebar(
                         if let Some(img) = ev.target()
                             .and_then(|t| t.dyn_into::<web_sys::HtmlImageElement>().ok())
                         {
-                            img.style().set_property("display", "none").ok();
+                            // Use set_attribute to avoid conflict with Leptos's style() extension trait
+                            let _ = img.set_attribute("style", "display:none");
                         }
                     }
                 />
