@@ -6,7 +6,8 @@ use crate::components::icons::{IconLoader, IconCheck, IconShield};
 #[component]
 pub fn SettingsView() -> impl IntoView {
     // ── Change password ────────────────────────────────────────
-    let (current_pw,  set_current_pw)  = signal(String::new());
+    // _current_pw: field exists for future "verify old password" flow
+    let (_current_pw, set_current_pw)  = signal(String::new());
     let (new_pw,      set_new_pw)      = signal(String::new());
     let (confirm_pw,  set_confirm_pw)  = signal(String::new());
     let (pw_loading,  set_pw_loading)  = signal(false);
@@ -68,8 +69,6 @@ pub fn SettingsView() -> impl IntoView {
         set_delete_loading.set(true);
         set_delete_error.set(String::new());
 
-        // Sign out for now — full account deletion requires a Supabase Edge Function
-        // since the anon key cannot call admin.deleteUser
         let client = SupabaseClient::new();
         spawn_local(async move {
             let _ = client.sign_out().await;
