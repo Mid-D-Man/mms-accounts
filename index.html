@@ -1,4 +1,3 @@
-<!-- index.html — replace the single CSS link with one per file -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,16 +18,27 @@
     rel="stylesheet"
   />
 
-  <!-- Trunk directive — Rust/WASM -->
+  <!-- Trunk: Rust/WASM -->
   <link data-trunk rel="rust" data-wasm-opt="z" />
 
-  <!-- CSS — each file tagged individually so Trunk copies all of them to dist/ -->
+  <!-- Foundation -->
   <link data-trunk rel="css" href="styles/tokens.css" />
   <link data-trunk rel="css" href="styles/components.css" />
+
+  <!-- Pages -->
   <link data-trunk rel="css" href="styles/auth.css" />
   <link data-trunk rel="css" href="styles/landing.css" />
-  <link data-trunk rel="css" href="styles/dashboard.css" />
   <link data-trunk rel="css" href="styles/admin.css" />
+
+  <!-- Dashboard — split by component -->
+  <link data-trunk rel="css" href="styles/sidebar.css" />
+  <link data-trunk rel="css" href="styles/dashboard-layout.css" />
+  <link data-trunk rel="css" href="styles/overview.css" />
+  <link data-trunk rel="css" href="styles/profile.css" />
+  <link data-trunk rel="css" href="styles/settings.css" />
+  <link data-trunk rel="css" href="styles/credentials.css" />
+  <link data-trunk rel="css" href="styles/services.css" />
+  <link data-trunk rel="css" href="styles/registry.css" />
 
   <style>
     html, body {
@@ -48,9 +58,7 @@
       pointer-events: none;
     }
 
-    .wasm-loading-wordmark {
-      display: flex; align-items: baseline; gap: 0.5rem;
-    }
+    .wasm-loading-wordmark { display: flex; align-items: baseline; gap: 0.5rem; }
 
     .wasm-loading-mms {
       font-family: 'Orbitron', monospace;
