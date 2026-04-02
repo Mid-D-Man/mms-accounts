@@ -52,17 +52,11 @@ pub fn DashboardPage() -> impl IntoView {
     Effect::new(move |_| {
         let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
             .unwrap_or_default();
-        if user_id.is_empty() {
-            set_loading.set(false);
-            return;
-        }
+        if user_id.is_empty() { set_loading.set(false); return; }
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.get_profile(&user_id).await {
-                Ok(p) => {
-                    set_profile.set(Some(p));
-                    set_loading.set(false);
-                }
+                Ok(p) => { set_profile.set(Some(p)); set_loading.set(false); }
                 Err(_) => {
                     SupabaseClient::clear_session();
                     if let Some(window) = web_sys::window() {
@@ -97,9 +91,7 @@ pub fn DashboardPage() -> impl IntoView {
                     {move || if loading.get() {
                         view! {
                             <div class="dashboard-loading">
-                                <div class="spinner-wrap">
-                                    <div class="spinner"></div>
-                                </div>
+                                <div class="spinner-wrap"><div class="spinner"></div></div>
                             </div>
                         }.into_any()
                     } else {
@@ -122,4 +114,4 @@ pub fn DashboardPage() -> impl IntoView {
             </div>
         </div>
     }.into_any()
-                    }
+}
