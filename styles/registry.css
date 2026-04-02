@@ -4,16 +4,10 @@
 .registry-header { display: flex; align-items: flex-start; gap: 1rem; }
 
 .registry-header-icon {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cobalt-faint);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  color: var(--cobalt-light);
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cobalt-faint); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius); color: var(--cobalt-light);
 }
 
 .registry-title    { font-size: 1.4rem; color: var(--text-primary); margin-bottom: 0.35rem; }
@@ -22,185 +16,175 @@
 
 /* ── Gate (not subscribed) ───────────────────────────────────── */
 .registry-gate {
-  background: var(--bg-card);
-  border: 1px dashed var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 3rem 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
+  background: var(--bg-card); border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg); padding: 3rem 2rem;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1rem; text-align: center;
 }
-
 .registry-gate-icon {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cobalt-faint);
-  border: 1px solid var(--border-subtle);
-  border-radius: 50%;
-  color: var(--cobalt-light);
+  width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cobalt-faint); border: 1px solid var(--border-subtle);
+  border-radius: 50%; color: var(--cobalt-light);
 }
-
 .registry-gate-title { font-size: 1.1rem; color: var(--text-primary); }
 .registry-gate-desc  { font-size: 0.9rem; color: var(--text-secondary); max-width: 400px; line-height: 1.7; }
 .registry-gate-note  { font-family: var(--font-mono); font-size: 0.72rem; color: var(--cyan-neon); }
 
 /* ── Content + cards ─────────────────────────────────────────── */
-.registry-content { display: flex; flex-direction: column; gap: 1.5rem; max-width: 760px; }
+.registry-content { display: flex; flex-direction: column; gap: 1.5rem; max-width: 820px; }
 
 .registry-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: var(--card-shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); padding: 1.5rem;
+  box-shadow: var(--card-shadow); display: flex; flex-direction: column; gap: 1.25rem;
 }
 
 .registry-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1rem; flex-wrap: wrap;
 }
-
 .registry-card-title { font-size: 0.9375rem; color: var(--text-primary); margin-bottom: 0.25rem; }
 .registry-card-desc  { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.6; }
 
-/* ── Submit form ─────────────────────────────────────────────── */
+/* ── Form wrapper ────────────────────────────────────────────── */
 .registry-form-wrap {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  padding: 1.25rem;
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius); overflow: hidden;
 }
 
+/* ── Tab switcher ────────────────────────────────────────────── */
+.submit-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(65, 105, 225, 0.03);
+}
+
+.submit-tab {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.625rem 1rem;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: var(--font-mono); font-size: 0.68rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-muted); cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.submit-tab:hover { color: var(--text-secondary); }
+
+.submit-tab--active {
+  color: var(--cobalt-light);
+  border-bottom-color: var(--cobalt-light);
+}
+
+/* ── Tab sections — CSS show/hide ────────────────────────────── */
+.tab-section { padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); }
+.tab-section--hidden { display: none; }
+
+/* ── Form inside the wrapper ─────────────────────────────────── */
 .registry-form { display: flex; flex-direction: column; }
 
 .registry-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
 }
 
 .registry-form-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
+  display: flex; gap: 0.5rem; justify-content: flex-end;
+  padding: 1rem 1.25rem;
 }
 
 /* ── File drop zone ──────────────────────────────────────────── */
 .file-drop-zone {
-  display: block;
-  border: 1px dashed var(--border-active);
-  border-radius: var(--radius);
-  cursor: pointer;
+  display: block; border: 1px dashed var(--border-active);
+  border-radius: var(--radius); cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
-
 .file-drop-zone:hover {
-  border-color: var(--cyan-neon);
-  background: rgba(0, 212, 255, 0.03);
+  border-color: var(--cyan-neon); background: rgba(0, 212, 255, 0.03);
 }
-
 .file-input-hidden { display: none; }
-
 .file-drop-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.5rem; padding: 1.5rem;
 }
-
 .file-drop-icon     { width: 28px; height: 28px; color: var(--cobalt-light); opacity: 0.7; }
 .file-drop-text     { font-size: 0.875rem; color: var(--text-muted); }
 .file-drop-selected { font-family: var(--font-mono); font-size: 0.8rem; color: var(--cyan-neon); }
 
-/* ── Empty state ─────────────────────────────────────────────── */
-.registry-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 2.5rem 2rem;
-  text-align: center;
+/* ── .mdix code editor textarea ──────────────────────────────── */
+.mdix-editor {
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.7 !important;
+  resize: vertical;
+  min-height: 320px;
+  background: var(--bg-base) !important;
+  color: var(--text-primary) !important;
+  tab-size: 2;
 }
 
+.mdix-editor:focus {
+  border-color: var(--cobalt-light) !important;
+  box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.1) !important;
+}
+
+/* ── Form hint text ──────────────────────────────────────────── */
+.form-hint {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  letter-spacing: 0.04em; color: var(--text-muted);
+  margin-top: 0.25rem; display: block;
+}
+
+.form-label-optional { font-weight: 400; color: var(--text-muted); font-size: 0.65rem; }
+.form-label-required { color: var(--crimson); }
+
+/* ── Shared error inside form ────────────────────────────────── */
+.registry-form > .status-msg { margin: 0 1.25rem 1rem; }
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.registry-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.75rem; padding: 2.5rem 2rem; text-align: center;
+}
 .registry-empty-icon  { width: 36px; height: 36px; color: var(--text-muted); opacity: 0.4; }
 .registry-empty-title { font-size: 0.9375rem; color: var(--text-primary); font-weight: 600; }
 .registry-empty-sub   { font-size: 0.8125rem; color: var(--text-secondary); max-width: 320px; line-height: 1.7; }
 
 /* ── Submission list ─────────────────────────────────────────── */
-.registry-list {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--border-subtle);
-}
+.registry-list { display: flex; flex-direction: column; border-top: 1px solid var(--border-subtle); }
 
 .sub-row {
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 0.15s;
+  padding: 1rem 0; border-bottom: 1px solid var(--border-subtle); transition: background 0.15s;
 }
-
 .sub-row:last-child { border-bottom: none; }
 .sub-row:hover      { background: rgba(65, 105, 225, 0.02); }
 
 .sub-row-main { display: flex; align-items: flex-start; gap: 0.875rem; }
 
 .sub-row-icon {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cobalt-faint);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--cobalt-light);
-  margin-top: 0.1rem;
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cobalt-faint); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); color: var(--cobalt-light); margin-top: 0.1rem;
 }
 
 .sub-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 
-.sub-row-top {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
+.sub-row-top { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 
 .sub-filename {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-family: var(--font-mono); font-size: 0.875rem;
+  font-weight: 600; color: var(--text-primary);
 }
 
 /* Status badges */
 .sub-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.2rem 0.55rem;
-  border-radius: 3px;
-  border: 1px solid;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-family: var(--font-mono); font-size: 0.6rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.2rem 0.55rem; border-radius: 3px; border: 1px solid;
 }
-
 .sub-status--pending  { background: rgba(65,105,225,0.08);  border-color: rgba(65,105,225,0.25);  color: var(--cobalt-light); }
 .sub-status--approved { background: rgba(0,212,255,0.08);   border-color: rgba(0,212,255,0.25);   color: var(--cyan-neon);    }
 .sub-status--rejected { background: var(--crimson-faint);   border-color: rgba(220,20,60,0.25);   color: var(--crimson);      }
@@ -212,40 +196,26 @@
 .sub-meta-value { font-size: 0.8125rem; color: var(--text-secondary); }
 
 .sub-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-
 .sub-tag {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  padding: 0.15rem 0.45rem;
-  background: var(--cobalt-faint);
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  color: var(--text-muted);
+  font-family: var(--font-mono); font-size: 0.65rem;
+  padding: 0.15rem 0.45rem; background: var(--cobalt-faint);
+  border: 1px solid var(--border-subtle); border-radius: 3px; color: var(--text-muted);
 }
 
 .sub-admin-note {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-  background: var(--crimson-faint);
-  border: 1px solid rgba(220, 20, 60, 0.2);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
+  display: flex; gap: 0.5rem; align-items: flex-start;
+  background: var(--crimson-faint); border: 1px solid rgba(220, 20, 60, 0.2);
+  border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; font-size: 0.8125rem;
 }
-
 .sub-admin-note-label {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--crimson);
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--crimson);
+  flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.06em;
 }
-
 .sub-admin-note-text { color: var(--text-secondary); line-height: 1.5; }
 
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .registry-form-row { grid-template-columns: 1fr; }
+  .registry-content  { max-width: 100%; }
+  .submit-tab        { padding: 0.5rem 0.75rem; }
   }
