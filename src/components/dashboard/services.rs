@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use gloo_storage::Storage;
-use crate::supabase::{SupabaseClient, Profile, Service, ServiceSubscription};
+use crate::supabase::{SupabaseClient, Service, ServiceSubscription};
 use crate::components::icons::{
     IconLayers, IconPackage, IconActivity, IconTrophy, IconCloud,
     IconLoader, IconCheck, IconX,
