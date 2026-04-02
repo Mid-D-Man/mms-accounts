@@ -222,7 +222,6 @@ pub fn IconArrowRight(#[prop(default = "icon-svg")] class: &'static str) -> impl
     }
 }
 
-/// Key icon — used for API credentials / secrets
 #[component]
 pub fn IconKey(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -236,7 +235,6 @@ pub fn IconKey(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoVi
     }
 }
 
-/// Copy icon — used for copy-to-clipboard buttons
 #[component]
 pub fn IconCopy(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -249,7 +247,6 @@ pub fn IconCopy(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoV
     }
 }
 
-/// Trash / revoke icon
 #[component]
 pub fn IconTrash(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -265,7 +262,6 @@ pub fn IconTrash(#[prop(default = "icon-svg")] class: &'static str) -> impl Into
     }
 }
 
-/// Plus icon — generate / add
 #[component]
 pub fn IconPlus(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -278,7 +274,6 @@ pub fn IconPlus(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoV
     }
 }
 
-/// Warning / alert triangle icon
 #[component]
 pub fn IconAlertTriangle(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -288,6 +283,159 @@ pub fn IconAlertTriangle(#[prop(default = "icon-svg")] class: &'static str) -> i
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
             <line x1="12" y1="9" x2="12" y2="13"/>
             <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+    }
+}
+
+/// Hamburger menu icon — mobile nav toggle
+#[component]
+pub fn IconMenu(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <line x1="3" y1="6"  x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    }
+}
+
+/// Layers / services icon
+#[component]
+pub fn IconLayers(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+            <polyline points="2 17 12 22 22 17"/>
+            <polyline points="2 12 12 17 22 12"/>
+        </svg>
+    }
+}
+
+/// Package / registry icon
+#[component]
+pub fn IconPackage(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M16.5 9.4l-9-5.19"/>
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+    }
+}
+
+/// Upload icon — file submission
+#[component]
+pub fn IconUpload(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polyline points="16 16 12 12 8 16"/>
+            <line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+    }
+}
+
+/// Double chevrons right — expand/pin sidebar
+#[component]
+pub fn IconChevronsRight(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polyline points="13 17 18 12 13 7"/>
+            <polyline points="6 17 11 12 6 7"/>
+        </svg>
+    }
+}
+
+/// Double chevrons left — collapse/unpin sidebar
+#[component]
+pub fn IconChevronsLeft(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polyline points="11 17 6 12 11 7"/>
+            <polyline points="18 17 13 12 18 7"/>
+        </svg>
+    }
+}
+
+/// Cloud saves icon
+#[component]
+pub fn IconCloud(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+        </svg>
+    }
+}
+
+/// Trophy / leaderboards icon
+#[component]
+pub fn IconTrophy(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
+        </svg>
+    }
+}
+
+/// Activity / analytics icon
+#[component]
+pub fn IconActivity(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+    }
+}
+
+/// File text — submissions / documents
+#[component]
+pub fn IconFileText(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>
+    }
+}
+
+/// Clock icon — pending states
+#[component]
+pub fn IconClock(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
         </svg>
     }
 }
