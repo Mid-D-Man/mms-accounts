@@ -14,20 +14,16 @@ wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 
 web-sys = { version = "0.3", features = [
-  # Core
   "console",
   "Window",
   "Document",
   "Element",
   "HtmlElement",
-  # Form elements
   "HtmlInputElement",
   "HtmlTextAreaElement",
   "HtmlSelectElement",
   "HtmlImageElement",
-  # Storage
   "Storage",
-  # Events
   "EventTarget",
   "Event",
   "MouseEvent",
@@ -35,22 +31,21 @@ web-sys = { version = "0.3", features = [
   "SubmitEvent",
   "InputEvent",
   "FocusEvent",
-  # Navigation
   "Location",
   "History",
-  # Crypto — for secret generation and SHA-256 hashing
   "Crypto",
   "SubtleCrypto",
-  # DOM
   "DomTokenList",
   "NodeList",
   "CssStyleDeclaration",
-  # Scroll
   "ScrollToOptions",
   "ScrollBehavior",
-  # Clipboard
   "Clipboard",
   "Navigator",
+  # File upload
+  "Blob",
+  "File",
+  "FileList",
 ] }
 
 gloo-net = { version = "0.6", features = ["http", "json"] }
