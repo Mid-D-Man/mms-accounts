@@ -15,7 +15,7 @@
 }
 
 .dash-sidebar.expanded { width: 240px; }
-
+.sidebar-admin-section--hidden { display: none; }
 /* ── Header row ──────────────────────────────────────────────── */
 .sidebar-header {
   height: 64px;
