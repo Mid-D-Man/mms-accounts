@@ -1,18 +1,16 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
-use crate::components::icons::{IconShield, IconUsers, IconUser};
+use crate::components::icons::{IconShield, IconUser};
 
 #[component]
 pub fn AdminDashView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
-    // Guard — non-admins should never reach this via UI, but double-check
     let is_admin = move || profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false);
 
-    let (profiles,  set_profiles)  = signal(Vec::<Profile>::new());
-    let (loading,   set_loading)   = signal(true);
-    let (error,     set_error)     = signal(String::new());
-    let (search,    set_search)    = signal(String::new());
+    let (profiles, set_profiles) = signal(Vec::<Profile>::new());
+    let (loading,  set_loading)  = signal(true);
+    let (error,    set_error)    = signal(String::new());
+    let (search,   set_search)   = signal(String::new());
 
     Effect::new(move |_| {
         if !is_admin() { return; }
@@ -37,7 +35,6 @@ pub fn AdminDashView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
             } else {
                 view! {
                     <div>
-                        // Page header
                         <div class="admin-view-header">
                             <div class="admin-view-header-icon">
                                 <IconShield class="icon-svg" />
@@ -50,7 +47,6 @@ pub fn AdminDashView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                             </div>
                         </div>
 
-                        // Stat cards
                         {move || {
                             let total  = profiles.get().len();
                             let admins = profiles.get().iter().filter(|p| p.is_admin()).count();
@@ -64,14 +60,12 @@ pub fn AdminDashView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                             }
                         }}
 
-                        // Error
                         {move || if !error.get().is_empty() {
                             view! {
                                 <div class="status-msg status-msg--error">{error.get()}</div>
                             }.into_any()
                         } else { view! { <span></span> }.into_any() }}
 
-                        // User table card
                         <div class="admin-table-card">
                             <div class="admin-table-toolbar">
                                 <h2 class="admin-table-title">"All Accounts"</h2>
@@ -85,12 +79,10 @@ pub fn AdminDashView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                             </div>
                             {move || if loading.get() {
                                 view! {
-                                    <div class="admin-table-loading">
-                                        <div class="spinner"></div>
-                                    </div>
+                                    <div class="admin-table-loading"><div class="spinner"></div></div>
                                 }.into_any()
                             } else {
-                                let q = search.get().to_lowercase();
+                                let q    = search.get().to_lowercase();
                                 let rows = profiles.get().into_iter()
                                     .filter(|p| {
                                         q.is_empty()
@@ -119,19 +111,16 @@ pub fn AdminDashView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                                     let joined  = p.created_at.as_deref()
                                                         .and_then(|d| d.get(..10))
                                                         .unwrap_or("—").to_string();
-                                                    let admin = p.is_admin();
-
+                                                    let is_admin = p.is_admin();
                                                     view! {
                                                         <tr class="admin-table-row">
                                                             <td class="admin-cell admin-cell--name">
-                                                                <span class="avatar-initial avatar-initial--sm">
-                                                                    {initial}
-                                                                </span>
+                                                                <span class="avatar-initial avatar-initial--sm">{initial}</span>
                                                                 <span>{name}</span>
                                                             </td>
                                                             <td class="admin-cell">{p.email}</td>
                                                             <td class="admin-cell">
-                                                                {if admin {
+                                                                {if is_admin {
                                                                     view! {
                                                                         <span class="badge badge--admin">
                                                                             <IconShield class="icon-svg icon-xs" />
@@ -172,4 +161,4 @@ fn AdminStatCard(label: &'static str, value: String) -> impl IntoView {
             <div class="admin-stat-label">{label}</div>
         </div>
     }
-  }
+}
