@@ -1,26 +1,76 @@
 use leptos::prelude::*;
+use wasm_bindgen_futures::spawn_local;
 use crate::supabase::Profile;
 use crate::components::icons::{
     IconHome, IconUser, IconSettings, IconLogOut, IconShield, IconKey,
+    IconLayers, IconPackage, IconChevronsRight, IconChevronsLeft,
 };
 use super::DashView;
 
 #[component]
 pub fn DashboardSidebar(
-    active_view: ReadSignal<DashView>,
-    on_navigate: impl Fn(DashView) + 'static + Clone,
-    profile:     ReadSignal<Option<Profile>>,
+    active_view:     ReadSignal<DashView>,
+    on_navigate:     impl Fn(DashView) + 'static + Clone,
+    profile:         ReadSignal<Option<Profile>>,
+    mobile_open:     ReadSignal<bool>,
+    set_mobile_open: WriteSignal<bool>,
 ) -> impl IntoView {
+    let (is_expanded, set_is_expanded) = signal(false);
+    let (is_pinned,   set_is_pinned)   = signal(false);
+
+    // Event handlers — signals are Copy so captured by value
+    let handle_mouse_enter = move |_: web_sys::MouseEvent| {
+        if !is_pinned.get() {
+            set_is_expanded.set(true);
+        }
+    };
+
+    let handle_mouse_leave = move |_: web_sys::MouseEvent| {
+        if !is_pinned.get() {
+            set_is_expanded.set(false);
+        }
+    };
+
+    let toggle_pin = move |_: web_sys::MouseEvent| {
+        let new_pinned = !is_pinned.get();
+        set_is_pinned.set(new_pinned);
+        // When unpinning, collapse unless mouse is currently over
+        if !new_pinned {
+            set_is_expanded.set(false);
+        }
+    };
+
     let nav = std::sync::Arc::new(on_navigate);
 
-    let nav_overview     = { let n = nav.clone(); move |_| n(DashView::Overview)     };
-    let nav_profile      = { let n = nav.clone(); move |_| n(DashView::Profile)      };
-    let nav_credentials  = { let n = nav.clone(); move |_| n(DashView::Credentials)  };
-    let nav_settings     = { let n = nav.clone(); move |_| n(DashView::Settings)     };
+    // Per-item nav closures — close mobile overlay on navigation
+    let nav_overview = {
+        let n = nav.clone();
+        move |_: web_sys::MouseEvent| { n(DashView::Overview); set_mobile_open.set(false); }
+    };
+    let nav_profile = {
+        let n = nav.clone();
+        move |_: web_sys::MouseEvent| { n(DashView::Profile); set_mobile_open.set(false); }
+    };
+    let nav_credentials = {
+        let n = nav.clone();
+        move |_: web_sys::MouseEvent| { n(DashView::Credentials); set_mobile_open.set(false); }
+    };
+    let nav_services = {
+        let n = nav.clone();
+        move |_: web_sys::MouseEvent| { n(DashView::Services); set_mobile_open.set(false); }
+    };
+    let nav_registry = {
+        let n = nav.clone();
+        move |_: web_sys::MouseEvent| { n(DashView::Registry); set_mobile_open.set(false); }
+    };
+    let nav_settings = {
+        let n = nav.clone();
+        move |_: web_sys::MouseEvent| { n(DashView::Settings); set_mobile_open.set(false); }
+    };
 
-    let handle_signout = move |_| {
+    let handle_signout = move |_: web_sys::MouseEvent| {
         let client = crate::supabase::SupabaseClient::new();
-        wasm_bindgen_futures::spawn_local(async move {
+        spawn_local(async move {
             let _ = client.sign_out().await;
             if let Some(window) = web_sys::window() {
                 let _ = window.location().set_hash("auth");
@@ -28,33 +78,70 @@ pub fn DashboardSidebar(
         });
     };
 
-    view! {
-        <aside class="dash-sidebar">
+    // Whether sidebar should visually appear expanded
+    let show_expanded = move || is_expanded.get() || is_pinned.get() || mobile_open.get();
 
-            // ── Brand ──────────────────────────────────────────
-            <div class="dash-sidebar-brand">
-                <img
-                    src="/logo.png"
-                    alt="MidManStudio"
-                    class="dash-sidebar-logo"
-                    on:error=move |ev| {
-                        use wasm_bindgen::JsCast;
-                        if let Some(img) = ev.target()
-                            .and_then(|t| t.dyn_into::<web_sys::HtmlImageElement>().ok())
-                        {
-                            // Use set_attribute to avoid conflict with Leptos's style() extension trait
-                            let _ = img.set_attribute("style", "display:none");
+    view! {
+        <>
+        // Mobile overlay backdrop
+        {move || if mobile_open.get() {
+            view! {
+                <div
+                    class="sidebar-mobile-overlay"
+                    on:click=move |_| set_mobile_open.set(false)
+                ></div>
+            }.into_any()
+        } else {
+            view! { <span></span> }.into_any()
+        }}
+
+        <aside
+            class=move || {
+                let mut c = "dash-sidebar".to_string();
+                if show_expanded()       { c.push_str(" expanded"); }
+                if mobile_open.get()     { c.push_str(" mobile-open"); }
+                c
+            }
+            on:mouseenter=handle_mouse_enter
+            on:mouseleave=handle_mouse_leave
+        >
+            // ── Sidebar Header ─────────────────────────────────
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <img
+                        src="/logo.png"
+                        alt="MmS"
+                        class="sidebar-logo-img"
+                        on:error=move |ev| {
+                            use wasm_bindgen::JsCast;
+                            if let Some(img) = ev.target()
+                                .and_then(|t| t.dyn_into::<web_sys::HtmlImageElement>().ok())
+                            {
+                                let _ = img.set_attribute("style", "display:none");
+                            }
                         }
-                    }
-                />
-                <div class="dash-sidebar-brand-text">
-                    <span class="brand-mms">"MmS"</span>
-                    <span class="brand-accounts">"Accounts"</span>
+                    />
+                    <div class="sidebar-brand-text">
+                        <span class="brand-mms">"MmS"</span>
+                        <span class="brand-accounts">"Accounts"</span>
+                    </div>
                 </div>
+                // Pin button — visible when expanded
+                <button
+                    class="sidebar-pin-btn"
+                    on:click=toggle_pin
+                    title=move || if is_pinned.get() { "Unpin sidebar" } else { "Pin sidebar open" }
+                >
+                    {move || if is_pinned.get() {
+                        view! { <IconChevronsLeft class="icon-svg icon-sm" /> }.into_any()
+                    } else {
+                        view! { <IconChevronsRight class="icon-svg icon-sm" /> }.into_any()
+                    }}
+                </button>
             </div>
 
-            // ── User info ──────────────────────────────────────
-            <div class="dash-sidebar-user">
+            // ── User Info ──────────────────────────────────────
+            <div class="sidebar-user">
                 <div class="sidebar-avatar">
                     {move || {
                         let name = profile.get()
@@ -77,79 +164,124 @@ pub fn DashboardSidebar(
                     </span>
                     {move || if profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false) {
                         view! {
-                            <span class="sidebar-role-badge">
+                            <span class="sidebar-role-badge sidebar-role-badge--admin">
                                 <IconShield class="icon-svg icon-xs" />
                                 "Admin"
                             </span>
                         }.into_any()
                     } else {
-                        view! { <span class="sidebar-role-badge">"User"</span> }.into_any()
+                        view! {
+                            <span class="sidebar-role-badge">"User"</span>
+                        }.into_any()
                     }}
                 </div>
             </div>
 
-            // ── Nav ────────────────────────────────────────────
-            <nav class="dash-nav">
-                <button
-                    class=move || if active_view.get() == DashView::Overview {
-                        "dash-nav-item dash-nav-item--active"
-                    } else { "dash-nav-item" }
-                    on:click=nav_overview
-                >
-                    <IconHome class="icon-svg icon-sm" />
-                    <span>"Overview"</span>
-                </button>
+            // ── Primary Navigation ─────────────────────────────
+            <nav class="sidebar-nav">
+                <div class="sidebar-nav-section">
+                    <SidebarItem
+                        icon_slot=view! { <IconHome class="icon-svg icon-sm" /> }.into_any()
+                        label="Overview"
+                        active=Signal::derive(move || active_view.get() == DashView::Overview)
+                        on_click=nav_overview
+                    />
+                    <SidebarItem
+                        icon_slot=view! { <IconUser class="icon-svg icon-sm" /> }.into_any()
+                        label="Profile"
+                        active=Signal::derive(move || active_view.get() == DashView::Profile)
+                        on_click=nav_profile
+                    />
+                    <SidebarItem
+                        icon_slot=view! { <IconKey class="icon-svg icon-sm" /> }.into_any()
+                        label="Credentials"
+                        active=Signal::derive(move || active_view.get() == DashView::Credentials)
+                        on_click=nav_credentials
+                    />
+                </div>
 
-                <button
-                    class=move || if active_view.get() == DashView::Profile {
-                        "dash-nav-item dash-nav-item--active"
-                    } else { "dash-nav-item" }
-                    on:click=nav_profile
-                >
-                    <IconUser class="icon-svg icon-sm" />
-                    <span>"Profile"</span>
-                </button>
+                <div class="sidebar-nav-divider"></div>
 
-                <button
-                    class=move || if active_view.get() == DashView::Credentials {
-                        "dash-nav-item dash-nav-item--active"
-                    } else { "dash-nav-item" }
-                    on:click=nav_credentials
-                >
-                    <IconKey class="icon-svg icon-sm" />
-                    <span>"Credentials"</span>
-                </button>
-
-                <button
-                    class=move || if active_view.get() == DashView::Settings {
-                        "dash-nav-item dash-nav-item--active"
-                    } else { "dash-nav-item" }
-                    on:click=nav_settings
-                >
-                    <IconSettings class="icon-svg icon-sm" />
-                    <span>"Settings"</span>
-                </button>
+                <div class="sidebar-nav-section">
+                    <div class="sidebar-nav-label">"Platform"</div>
+                    <SidebarItem
+                        icon_slot=view! { <IconLayers class="icon-svg icon-sm" /> }.into_any()
+                        label="Services"
+                        active=Signal::derive(move || active_view.get() == DashView::Services)
+                        on_click=nav_services
+                    />
+                    <SidebarItem
+                        icon_slot=view! { <IconPackage class="icon-svg icon-sm" /> }.into_any()
+                        label="Registry"
+                        active=Signal::derive(move || active_view.get() == DashView::Registry)
+                        on_click=nav_registry
+                    />
+                </div>
             </nav>
 
-            // ── Bottom ─────────────────────────────────────────
-            <div class="dash-sidebar-bottom">
+            // ── Footer Navigation ──────────────────────────────
+            <div class="sidebar-footer">
+                <SidebarItem
+                    icon_slot=view! { <IconSettings class="icon-svg icon-sm" /> }.into_any()
+                    label="Settings"
+                    active=Signal::derive(move || active_view.get() == DashView::Settings)
+                    on_click=nav_settings
+                />
+
                 {move || if profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false) {
                     view! {
-                        <a href="#admin" class="dash-nav-item dash-nav-item--admin">
-                            <IconShield class="icon-svg icon-sm" />
-                            <span>"Admin Panel"</span>
+                        
+                            href="#admin"
+                            class="sidebar-item sidebar-item--admin"
+                            on:click=move |_| set_mobile_open.set(false)
+                        >
+                            <span class="sidebar-item-icon">
+                                <IconShield class="icon-svg icon-sm" />
+                            </span>
+                            <span class="sidebar-item-label">"Admin Panel"</span>
                         </a>
                     }.into_any()
                 } else {
                     view! { <span></span> }.into_any()
                 }}
 
-                <button class="dash-nav-item dash-nav-item--signout" on:click=handle_signout>
-                    <IconLogOut class="icon-svg icon-sm" />
-                    <span>"Sign Out"</span>
+                <button
+                    class="sidebar-item sidebar-item--signout"
+                    on:click=handle_signout
+                >
+                    <span class="sidebar-item-icon">
+                        <IconLogOut class="icon-svg icon-sm" />
+                    </span>
+                    <span class="sidebar-item-label">"Sign Out"</span>
                 </button>
             </div>
-
         </aside>
+        </>
+    }
+}
+
+// ── Shared sidebar item ────────────────────────────────────────
+
+#[component]
+fn SidebarItem(
+    icon_slot: AnyView,
+    label:     &'static str,
+    active:    Signal<bool>,
+    on_click:  impl Fn(web_sys::MouseEvent) + 'static,
+) -> impl IntoView {
+    view! {
+        <button
+            class=move || {
+                if active.get() {
+                    "sidebar-item sidebar-item--active"
+                } else {
+                    "sidebar-item"
+                }
+            }
+            on:click=on_click
+        >
+            <span class="sidebar-item-icon">{icon_slot}</span>
+            <span class="sidebar-item-label">{label}</span>
+        </button>
     }
 }
