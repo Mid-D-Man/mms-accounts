@@ -6,6 +6,7 @@ pub mod settings;
 pub mod credentials;
 pub mod services;
 pub mod registry;
+pub mod admin_view;
 
 pub use sidebar::*;
 pub use header::*;
@@ -15,6 +16,7 @@ pub use settings::*;
 pub use credentials::*;
 pub use services::*;
 pub use registry::*;
+pub use admin_view::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -30,6 +32,7 @@ pub enum DashView {
     Credentials,
     Services,
     Registry,
+    Admin,
 }
 
 #[component]
@@ -41,10 +44,10 @@ pub fn DashboardPage() -> impl IntoView {
         return view! { <div></div> }.into_any();
     }
 
-    let (profile,          set_profile)          = signal(None::<Profile>);
-    let (loading,          set_loading)          = signal(true);
-    let (active_view,      set_active_view)      = signal(DashView::Overview);
-    let (mobile_nav_open,  set_mobile_nav_open)  = signal(false);
+    let (profile,         set_profile)         = signal(None::<Profile>);
+    let (loading,         set_loading)         = signal(true);
+    let (active_view,     set_active_view)     = signal(DashView::Overview);
+    let (mobile_nav_open, set_mobile_nav_open) = signal(false);
 
     Effect::new(move |_| {
         let user_id = gloo_storage::LocalStorage::get::<String>("mms_user_id")
@@ -72,7 +75,6 @@ pub fn DashboardPage() -> impl IntoView {
 
     view! {
         <div class="dashboard-layout">
-            // Mobile hamburger — only visible on small screens
             <button
                 class="mobile-hamburger"
                 on:click=move |_| set_mobile_nav_open.set(true)
@@ -113,10 +115,11 @@ pub fn DashboardPage() -> impl IntoView {
                             DashView::Credentials => view! { <CredentialsView profile=profile /> }.into_any(),
                             DashView::Services    => view! { <ServicesView profile=profile /> }.into_any(),
                             DashView::Registry    => view! { <RegistryView profile=profile /> }.into_any(),
+                            DashView::Admin       => view! { <AdminDashView profile=profile /> }.into_any(),
                         }
                     }}
                 </main>
             </div>
         </div>
     }.into_any()
-}
+                    }
