@@ -105,7 +105,8 @@ pub fn DashboardPage() -> impl IntoView {
                             }.into_any(),
                             DashView::Settings    => view! { <SettingsView /> }.into_any(),
                             DashView::Credentials => view! { <CredentialsView profile=profile /> }.into_any(),
-                            DashView::Services    => view! { <ServicesView profile=profile /> }.into_any(),
+                            // ServicesView no longer takes a profile prop
+                            DashView::Services    => view! { <ServicesView /> }.into_any(),
                             DashView::Registry    => view! { <RegistryView profile=profile /> }.into_any(),
                             DashView::Admin       => view! { <AdminDashView profile=profile /> }.into_any(),
                         }
