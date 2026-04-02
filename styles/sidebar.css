@@ -1,0 +1,355 @@
+/* ── Collapsible sidebar shell ───────────────────────────────── */
+.dash-sidebar {
+  width: 72px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 200;
+}
+
+.dash-sidebar.expanded { width: 240px; }
+
+/* ── Header row ──────────────────────────────────────────────── */
+.sidebar-header {
+  height: 64px;
+  min-height: 64px;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease 0.05s,
+              max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dash-sidebar.expanded .sidebar-brand-text {
+  opacity: 1;
+  max-width: 180px;
+}
+
+.sidebar-pin-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--cobalt-faint);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.dash-sidebar.expanded .sidebar-pin-btn { opacity: 1; }
+
+.sidebar-pin-btn:hover {
+  background: rgba(65, 105, 225, 0.15);
+  color: var(--cobalt-light);
+}
+
+/* ── User info ───────────────────────────────────────────────── */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-avatar { flex-shrink: 0; }
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease 0.05s,
+              max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dash-sidebar.expanded .sidebar-user-info {
+  opacity: 1;
+  max-width: 160px;
+}
+
+.sidebar-user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sidebar-role-badge--admin { color: var(--cobalt-light); }
+
+/* ── Nav scroll area ─────────────────────────────────────────── */
+.sidebar-nav {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(65, 105, 225, 0.2) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.sidebar-nav::-webkit-scrollbar       { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(65, 105, 225, 0.2); border-radius: 2px; }
+
+.sidebar-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.sidebar-nav-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0.5rem 0.25rem;
+}
+
+.sidebar-nav-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0.5rem 0.75rem 0.25rem;
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  height: 0;
+  transition: opacity 0.2s ease,
+              max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.2s ease;
+}
+
+.dash-sidebar.expanded .sidebar-nav-label {
+  opacity: 1;
+  max-width: 200px;
+  height: auto;
+}
+
+/* ── Nav item ────────────────────────────────────────────────── */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  min-height: 40px;
+  position: relative;
+}
+
+/* Center icon when collapsed */
+.dash-sidebar:not(.expanded) .sidebar-item { justify-content: center; }
+
+.sidebar-item:hover { background: var(--cobalt-faint); color: var(--text-primary); }
+
+.sidebar-item--active {
+  color: var(--cobalt-light);
+  background: rgba(65, 105, 225, 0.1);
+}
+
+.sidebar-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--cobalt-light);
+  border-radius: 0 2px 2px 0;
+}
+
+.sidebar-item--active:hover { background: rgba(65, 105, 225, 0.14); }
+.sidebar-item--admin  { color: var(--cobalt-light); }
+.sidebar-item--signout { color: var(--text-muted); }
+.sidebar-item--signout:hover { color: var(--crimson); background: var(--crimson-faint); }
+
+.sidebar-item-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-item-label {
+  flex: 1;
+  overflow: hidden;
+  opacity: 0;
+  max-width: 0;
+  white-space: nowrap;
+  transition: opacity 0.2s ease 0.05s,
+              max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dash-sidebar.expanded .sidebar-item-label {
+  opacity: 1;
+  max-width: 160px;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.sidebar-footer {
+  padding: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+/* ── Mobile overlay + hamburger ──────────────────────────────── */
+.sidebar-mobile-overlay {
+  display: none;
+}
+
+.mobile-hamburger {
+  display: none;
+  position: fixed;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 201;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-hamburger:hover {
+  background: var(--cobalt-faint);
+  color: var(--cobalt-light);
+}
+
+/* ── Mobile breakpoint ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .dash-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+
+  .dash-sidebar.mobile-open {
+    transform: translateX(0);
+    width: 280px;
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Always show labels on mobile regardless of expanded */
+  .dash-sidebar .sidebar-brand-text,
+  .dash-sidebar .sidebar-user-info,
+  .dash-sidebar .sidebar-item-label,
+  .dash-sidebar .sidebar-nav-label {
+    opacity: 1 !important;
+    max-width: 200px !important;
+    height: auto !important;
+  }
+
+  .dash-sidebar .sidebar-item {
+    justify-content: flex-start !important;
+    padding: 0.625rem !important;
+  }
+
+  .dash-sidebar .sidebar-pin-btn { display: none; }
+
+  .sidebar-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 199;
+  }
+
+  .mobile-hamburger { display: flex; }
+}
