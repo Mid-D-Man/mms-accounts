@@ -1,0 +1,159 @@
+/* ── Page header ─────────────────────────────────────────────── */
+.services-view { display: flex; flex-direction: column; gap: 1.75rem; }
+
+.services-header { display: flex; align-items: flex-start; gap: 1rem; }
+
+.services-header-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cobalt-faint);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  color: var(--cobalt-light);
+}
+
+.services-title    { font-size: 1.4rem; color: var(--text-primary); margin-bottom: 0.35rem; }
+.services-subtitle { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; max-width: 560px; }
+.services-loading  { display: flex; align-items: center; justify-content: center; padding: 4rem; }
+
+/* ── Grid ────────────────────────────────────────────────────── */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Service card ────────────────────────────────────────────── */
+.service-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-card:hover { border-color: var(--border-active); }
+
+.service-card--enabled {
+  border-color: rgba(65, 105, 225, 0.4);
+  background: rgba(65, 105, 225, 0.03);
+}
+
+.service-card--enabled:hover {
+  border-color: var(--cobalt-light);
+  box-shadow: var(--glow-cobalt);
+}
+
+.service-card--coming-soon { opacity: 0.65; }
+
+/* ── Coming soon pill ────────────────────────────────────────── */
+.service-coming-soon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(65, 105, 225, 0.12);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.5rem;
+}
+
+.service-coming-soon-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Card top row ────────────────────────────────────────────── */
+.service-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* ── Service icon — circular ─────────────────────────────────── */
+.service-icon-wrap {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cobalt-faint);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  color: var(--cobalt-light);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.service-icon-wrap--active {
+  background: rgba(65, 105, 225, 0.15);
+  border-color: var(--cobalt-light);
+  color: var(--cyan-neon);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+}
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.service-card-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.service-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+.service-badge--free   { background: rgba(0,212,255,0.06);   border-color: rgba(0,212,255,0.2);   color: var(--cyan-neon);    }
+.service-badge--pro    { background: rgba(220,20,60,0.06);   border-color: rgba(220,20,60,0.2);   color: var(--crimson);      }
+.service-badge--active { background: rgba(65,105,225,0.1);   border-color: rgba(65,105,225,0.3);  color: var(--cobalt-light); }
+
+/* ── Card body ───────────────────────────────────────────────── */
+.service-card-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0;
+}
+
+.service-card-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  flex: 1;
+}
+
+.service-slug { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
+
+.service-slug code {
+  background: var(--cobalt-faint);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+
+.service-toggle-btn { align-self: flex-start; margin-top: 0.25rem; }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .services-grid { grid-template-columns: 1fr; }
+  }
