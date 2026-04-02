@@ -26,6 +26,10 @@ impl SupabaseClient {
         format!("{}/rest/v1/{}", self.url, table)
     }
 
+    pub fn storage_url(&self, bucket: &str, path: &str) -> String {
+        format!("{}/storage/v1/object/{}/{}", self.url, bucket, path)
+    }
+
     pub fn is_logged_in() -> bool {
         LocalStorage::get::<String>("mms_access_token").is_ok()
     }
@@ -38,9 +42,7 @@ impl SupabaseClient {
 }
 
 impl Default for SupabaseClient {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 // ── Auth response types ────────────────────────────────────────
@@ -67,9 +69,7 @@ impl User {
         self.user_metadata
             .get("display_name")
             .and_then(|v| v.as_str())
-            .unwrap_or_else(|| {
-                self.email.split('@').next().unwrap_or("User")
-            })
+            .unwrap_or_else(|| self.email.split('@').next().unwrap_or("User"))
             .to_string()
     }
 }
@@ -98,9 +98,7 @@ impl Profile {
             .unwrap_or_else(|| self.email.clone())
     }
 
-    pub fn is_admin(&self) -> bool {
-        self.role == "admin"
-    }
+    pub fn is_admin(&self) -> bool { self.role == "admin" }
 }
 
 // ── MID Secret ─────────────────────────────────────────────────
@@ -121,9 +119,7 @@ pub struct MidSecret {
 
 impl MidSecret {
     pub fn display_label(&self) -> String {
-        self.label
-            .clone()
-            .filter(|s| !s.is_empty())
+        self.label.clone().filter(|s| !s.is_empty())
             .unwrap_or_else(|| "Unnamed Secret".to_string())
     }
 
@@ -132,18 +128,77 @@ impl MidSecret {
     }
 
     pub fn formatted_created(&self) -> String {
-        self.created_at
-            .get(..10)
-            .unwrap_or("—")
-            .to_string()
+        self.created_at.get(..10).unwrap_or("—").to_string()
     }
 
     pub fn formatted_last_used(&self) -> String {
-        self.last_used_at
-            .as_deref()
+        self.last_used_at.as_deref()
             .and_then(|s| s.get(..10))
             .unwrap_or("Never")
             .to_string()
+    }
+}
+
+// ── Service ────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    pub id:          String,
+    pub slug:        String,
+    pub name:        String,
+    pub description: Option<String>,
+    pub is_active:   bool,
+    pub is_free:     bool,
+}
+
+// ── Service Subscription ───────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceSubscription {
+    pub id:          String,
+    pub user_id:     String,
+    pub service_id:  String,
+    pub status:      String,
+    pub tier:        String,
+    pub enrolled_at: String,
+    pub updated_at:  Option<String>,
+}
+
+impl ServiceSubscription {
+    pub fn is_active(&self) -> bool { self.status == "active" }
+}
+
+// ── Registry Submission ────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegistrySubmission {
+    pub id:                    String,
+    pub user_id:               String,
+    pub mid_id:                String,
+    pub filename:              String,
+    pub category:              String,
+    pub description:           String,
+    pub tags:                  Vec<String>,
+    pub version:               String,
+    pub status:                String,
+    pub admin_note:            Option<String>,
+    pub r2_key:                Option<String>,
+    pub supabase_storage_path: Option<String>,
+    pub submitted_at:          String,
+    pub reviewed_at:           Option<String>,
+}
+
+impl RegistrySubmission {
+    pub fn status_label(&self) -> &str {
+        match self.status.as_str() {
+            "approved" => "Approved",
+            "rejected" => "Rejected",
+            _          => "Pending",
+        }
+    }
+
+    pub fn formatted_submitted(&self) -> String {
+        self.submitted_at.get(..10).unwrap_or("—").to_string()
     }
 }
 
