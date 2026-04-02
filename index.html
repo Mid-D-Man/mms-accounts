@@ -6,19 +6,15 @@
   <title>MidManStudio Accounts</title>
   <meta name="description" content="MidManStudio Accounts — manage your MmS identity, studio access, and projects." />
   <meta name="theme-color" content="#040812" />
-
   <meta property="og:title"       content="MidManStudio Accounts" />
   <meta property="og:description" content="Your MmS identity in one place." />
   <meta property="og:type"        content="website" />
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet"
   />
-
-  <!-- Trunk: Rust/WASM -->
   <link data-trunk rel="rust" data-wasm-opt="z" />
 
   <!-- Foundation -->
@@ -28,7 +24,6 @@
   <!-- Pages -->
   <link data-trunk rel="css" href="styles/auth.css" />
   <link data-trunk rel="css" href="styles/landing.css" />
-  <link data-trunk rel="css" href="styles/admin.css" />
 
   <!-- Dashboard — split by component -->
   <link data-trunk rel="css" href="styles/sidebar.css" />
@@ -39,65 +34,18 @@
   <link data-trunk rel="css" href="styles/credentials.css" />
   <link data-trunk rel="css" href="styles/services.css" />
   <link data-trunk rel="css" href="styles/registry.css" />
+  <link data-trunk rel="css" href="styles/admin-view.css" />
 
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      background: #040812;
-      color: #e8edf8;
-      font-family: 'Rajdhani', sans-serif;
-      overflow-x: hidden;
-    }
-
-    .wasm-loading {
-      position: fixed; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: #040812; z-index: 9999;
-      gap: 1.75rem;
-      pointer-events: none;
-    }
-
+    html, body { margin: 0; padding: 0; background: #040812; color: #e8edf8; font-family: 'Rajdhani', sans-serif; overflow-x: hidden; }
+    .wasm-loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #040812; z-index: 9999; gap: 1.75rem; pointer-events: none; }
     .wasm-loading-wordmark { display: flex; align-items: baseline; gap: 0.5rem; }
-
-    .wasm-loading-mms {
-      font-family: 'Orbitron', monospace;
-      font-size: 1.4rem; font-weight: 900;
-      letter-spacing: 0.06em; color: #e8edf8;
-    }
-
-    .wasm-loading-accounts {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.75rem; font-weight: 400;
-      letter-spacing: 0.18em; color: #00d4ff;
-      text-transform: uppercase;
-    }
-
-    .wasm-loading-bar {
-      width: 120px; height: 1px;
-      background: rgba(65,105,225,0.2);
-      border-radius: 1px; overflow: hidden;
-    }
-
-    .wasm-loading-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4169e1, #00d4ff);
-      box-shadow: 0 0 6px #00d4ff;
-      animation: bar-sweep 1.8s ease-in-out infinite;
-    }
-
-    @keyframes bar-sweep {
-      0%   { width: 0%;  margin-left: 0%; }
-      50%  { width: 55%; margin-left: 22%; }
-      100% { width: 0%;  margin-left: 100%; }
-    }
-
-    .wasm-loading-label {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.55rem; letter-spacing: 0.2em;
-      text-transform: uppercase; color: #4a5880;
-    }
-
+    .wasm-loading-mms { font-family: 'Orbitron', monospace; font-size: 1.4rem; font-weight: 900; letter-spacing: 0.06em; color: #e8edf8; }
+    .wasm-loading-accounts { font-family: 'Orbitron', monospace; font-size: 0.75rem; font-weight: 400; letter-spacing: 0.18em; color: #00d4ff; text-transform: uppercase; }
+    .wasm-loading-bar { width: 120px; height: 1px; background: rgba(65,105,225,0.2); border-radius: 1px; overflow: hidden; }
+    .wasm-loading-fill { height: 100%; background: linear-gradient(90deg, #4169e1, #00d4ff); box-shadow: 0 0 6px #00d4ff; animation: bar-sweep 1.8s ease-in-out infinite; }
+    @keyframes bar-sweep { 0% { width: 0%; margin-left: 0%; } 50% { width: 55%; margin-left: 22%; } 100% { width: 0%; margin-left: 100%; } }
+    .wasm-loading-label { font-family: 'Orbitron', monospace; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: #4a5880; }
     body:has(.mms-app) .wasm-loading { display: none; }
   </style>
 </head>
@@ -107,9 +55,7 @@
       <span class="wasm-loading-mms">MmS</span>
       <span class="wasm-loading-accounts">Accounts</span>
     </div>
-    <div class="wasm-loading-bar">
-      <div class="wasm-loading-fill"></div>
-    </div>
+    <div class="wasm-loading-bar"><div class="wasm-loading-fill"></div></div>
     <div class="wasm-loading-label">Initializing</div>
   </div>
 </body>
