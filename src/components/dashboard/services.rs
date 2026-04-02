@@ -8,7 +8,7 @@ use crate::components::icons::{
 };
 
 #[component]
-pub fn ServicesView(_profile: ReadSignal<Option<Profile>>) -> impl IntoView {
+pub fn ServicesView() -> impl IntoView {
     let (services,      set_services)      = signal(Vec::<Service>::new());
     let (subscriptions, set_subscriptions) = signal(Vec::<ServiceSubscription>::new());
     let (loading,       set_loading)       = signal(true);
