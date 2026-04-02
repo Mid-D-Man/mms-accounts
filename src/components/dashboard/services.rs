@@ -8,7 +8,7 @@ use crate::components::icons::{
 };
 
 #[component]
-pub fn ServicesView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
+pub fn ServicesView(_profile: ReadSignal<Option<Profile>>) -> impl IntoView {
     let (services,      set_services)      = signal(Vec::<Service>::new());
     let (subscriptions, set_subscriptions) = signal(Vec::<ServiceSubscription>::new());
     let (loading,       set_loading)       = signal(true);
@@ -37,12 +37,11 @@ pub fn ServicesView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         });
     });
 
-    let handle_toggle = move |service_id: String, service_name: String| {
+    let handle_toggle = move |service_id: String| {
         let user_id  = gloo_storage::LocalStorage::get::<String>("mms_user_id")
             .unwrap_or_default();
         let svc_id   = service_id.clone();
-        let existing = subscriptions.get()
-            .into_iter().find(|s| s.service_id == svc_id);
+        let existing = subscriptions.get().into_iter().find(|s| s.service_id == svc_id);
 
         set_toggling.set(Some(service_id.clone()));
         let client = SupabaseClient::new();
@@ -73,15 +72,14 @@ pub fn ServicesView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
 
     view! {
         <div class="services-view">
-            // Modal
             {move || if let Some(svc) = modal_service.get() {
-                let subs       = subscriptions.get();
-                let is_sub     = subs.iter().any(|s| s.service_id == svc.id && s.is_active());
-                let svc_id     = svc.id.clone();
-                let svc_name   = svc.name.clone();
-                let tog_id     = svc_id.clone();
-                let tog_name   = svc_name.clone();
-                let is_loading = Signal::derive(move || toggling.get().as_deref() == Some(&svc_id));
+                let subs        = subscriptions.get();
+                let is_sub      = subs.iter().any(|s| s.service_id == svc.id && s.is_active());
+                let svc_id_tog  = svc.id.clone();
+                let svc_id_load = svc.id.clone();
+                let is_loading  = Signal::derive(move || {
+                    toggling.get().as_deref() == Some(&svc_id_load)
+                });
 
                 view! {
                     <ServiceModal
@@ -89,50 +87,41 @@ pub fn ServicesView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                         is_subscribed=is_sub
                         is_loading=is_loading
                         on_close=move || set_modal_service.set(None)
-                        on_toggle=move || handle_toggle(tog_id.clone(), tog_name.clone())
+                        on_toggle=move || handle_toggle(svc_id_tog.clone())
                     />
                 }.into_any()
             } else { view! { <span></span> }.into_any() }}
 
-            // Header
             <div class="services-header">
-                <div class="services-header-icon">
-                    <IconLayers class="icon-svg" />
-                </div>
+                <div class="services-header-icon"><IconLayers class="icon-svg" /></div>
                 <div>
                     <h1 class="services-title">"Platform Services"</h1>
                     <p class="services-subtitle">
-                        "Enable MidManStudio services for your account. Each service "
-                        "integrates with your MID ID and Credentials. Click a card to learn more."
+                        "Enable MidManStudio services for your account. "
+                        "Click a card to learn more before enabling."
                     </p>
                 </div>
             </div>
 
             {move || if !error.get().is_empty() {
-                view! {
-                    <div class="status-msg status-msg--error">{error.get()}</div>
-                }.into_any()
+                view! { <div class="status-msg status-msg--error">{error.get()}</div> }.into_any()
             } else { view! { <span></span> }.into_any() }}
 
             {move || if loading.get() {
-                view! {
-                    <div class="services-loading"><div class="spinner"></div></div>
-                }.into_any()
+                view! { <div class="services-loading"><div class="spinner"></div></div> }.into_any()
             } else {
                 let services_snap = services.get();
                 let subs_snap     = subscriptions.get();
-
                 view! {
                     <div class="services-grid">
                         {services_snap.into_iter().map(|svc| {
                             let sub          = subs_snap.iter().find(|s| s.service_id == svc.id).cloned();
                             let is_subscribed = sub.as_ref().map(|s| s.is_active()).unwrap_or(false);
-                            let svc_id_tog   = svc.id.clone();
-                            let svc_name_tog = svc.name.clone();
                             let svc_modal    = svc.clone();
-                            let svc_id_l     = svc.id.clone();
+                            let svc_id_tog   = svc.id.clone();
+                            let svc_id_load  = svc.id.clone();
                             let is_loading   = Signal::derive(move || {
-                                toggling.get().as_deref() == Some(&svc_id_l)
+                                toggling.get().as_deref() == Some(&svc_id_load)
                             });
 
                             view! {
@@ -141,7 +130,7 @@ pub fn ServicesView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                     is_subscribed=is_subscribed
                                     is_loading=is_loading
                                     on_click=move || set_modal_service.set(Some(svc_modal.clone()))
-                                    on_toggle=move || handle_toggle(svc_id_tog.clone(), svc_name_tog.clone())
+                                    on_toggle=move || handle_toggle(svc_id_tog.clone())
                                 />
                             }
                         }).collect_view()}
@@ -152,8 +141,6 @@ pub fn ServicesView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
     }
 }
 
-// ── Service Card ───────────────────────────────────────────────
-
 #[component]
 fn ServiceCard(
     service:       Service,
@@ -162,29 +149,28 @@ fn ServiceCard(
     on_click:      impl Fn() + 'static,
     on_toggle:     impl Fn() + 'static,
 ) -> impl IntoView {
-    let icon           = service_icon(&service.slug);
-    let name           = service.name.clone();
-    let desc           = service.description.clone()
-        .unwrap_or_default()
-        .chars().take(80).collect::<String>();
-    let desc           = if service.description.as_deref().map(|d| d.len()).unwrap_or(0) > 80 {
-        format!("{}...", desc)
-    } else { desc };
-    let is_active_svc  = service.is_active;
-    let is_free        = service.is_free;
+    let icon          = service_icon(&service.slug);
+    let name          = service.name.clone();
+    let full_desc     = service.description.clone().unwrap_or_default();
+    let short_desc    = if full_desc.len() > 90 {
+        format!("{}...", &full_desc[..90])
+    } else {
+        full_desc.clone()
+    };
+    let is_active_svc = service.is_active;
+    let is_free       = service.is_free;
 
     view! {
         <div
             class=move || {
                 let mut c = "service-card".to_string();
-                if is_subscribed   { c.push_str(" service-card--enabled"); }
-                if !is_active_svc  { c.push_str(" service-card--coming-soon"); }
+                if is_subscribed  { c.push_str(" service-card--enabled"); }
+                if !is_active_svc { c.push_str(" service-card--coming-soon"); }
                 c
             }
             on:click=move |_| on_click()
             role="button"
             tabindex="0"
-            style="cursor: pointer;"
         >
             {if !is_active_svc {
                 view! {
@@ -215,41 +201,31 @@ fn ServiceCard(
             </div>
 
             <h3 class="service-card-title">{name}</h3>
-            <p class="service-card-desc">{desc}</p>
+            <p class="service-card-desc">{short_desc}</p>
             <div class="service-slug"><code>{service.slug.clone()}</code></div>
 
-            // Toggle button — stop propagation so card click doesn't also fire
             {if is_active_svc {
                 view! {
                     <button
                         class=move || {
-                            if is_subscribed {
-                                "btn btn-ghost btn-sm service-toggle-btn"
-                            } else {
-                                "btn btn-primary btn-sm service-toggle-btn"
-                            }
+                            if is_subscribed { "btn btn-ghost btn-sm service-toggle-btn" }
+                            else             { "btn btn-primary btn-sm service-toggle-btn" }
                         }
                         disabled=move || is_loading.get()
                         on:click=move |ev| {
-                            // Prevent the card's on:click from also firing
                             use wasm_bindgen::JsCast;
-                            let _ = ev.dyn_ref::<web_sys::MouseEvent>()
-                                .map(|e| e.stop_propagation());
+                            if let Some(me) = ev.dyn_ref::<web_sys::MouseEvent>() {
+                                me.stop_propagation();
+                            }
                             on_toggle();
                         }
                     >
                         {move || if is_loading.get() {
-                            view! {
-                                <IconLoader class="icon-svg spin" />
-                                <span>"Updating..."</span>
-                            }.into_any()
+                            view! { <IconLoader class="icon-svg spin" /><span>"Updating..."</span> }.into_any()
                         } else if is_subscribed {
                             view! { <span>"Disable"</span> }.into_any()
                         } else {
-                            view! {
-                                <IconCheck class="icon-svg icon-xs" />
-                                <span>"Enable"</span>
-                            }.into_any()
+                            view! { <IconCheck class="icon-svg icon-xs" /><span>"Enable"</span> }.into_any()
                         }}
                     </button>
                 }.into_any()
@@ -258,56 +234,47 @@ fn ServiceCard(
     }
 }
 
-// ── Service Modal ──────────────────────────────────────────────
-
 #[component]
 fn ServiceModal(
     service:       Service,
     is_subscribed: bool,
     is_loading:    Signal<bool>,
-    on_close:      impl Fn() + 'static,
+    on_close:      impl Fn() + 'static + Clone,
     on_toggle:     impl Fn() + 'static,
 ) -> impl IntoView {
-    let icon        = service_icon(&service.slug);
-    let name        = service.name.clone();
-    let desc        = service.description.clone().unwrap_or_default();
-    let slug        = service.slug.clone();
-    let is_free     = service.is_free;
-    let is_active   = service.is_active;
+    let icon     = service_icon(&service.slug);
+    let name     = service.name.clone();
+    let slug     = service.slug.clone();
+    let is_free  = service.is_free;
+    let is_active = service.is_active;
 
-    // Extended descriptions per service
-    let extended_desc = match service.slug.as_str() {
+    // Owned String — no lifetime issues
+    let extended_desc: String = match service.slug.as_str() {
         "dixscript-registry" => "Submit and manage .mdix packages for the DixScript cloud registry. \
             Your packages become publicly importable by any DixScript file using from_cloud. \
-            Each submission is reviewed before going live. Requires your MID ID for attribution.",
-        "game-analytics"     => "Track player events, sessions, and custom metrics across all MmS games. \
+            Each submission is reviewed before going live. Requires your MID ID for attribution.".to_string(),
+        "game-analytics" => "Track player events, sessions, and custom metrics across all MmS games. \
             Send events via your MID Secret and view aggregated dashboards here. \
-            Supports custom event schemas, funnels, and retention analysis.",
-        "leaderboards"       => "Per-game configurable leaderboards with public read access via MID ID. \
+            Supports custom event schemas, funnels, and retention analysis.".to_string(),
+        "leaderboards" => "Per-game configurable leaderboards with public read access via MID ID. \
             Create boards with custom scoring, time windows (daily/weekly/all-time), \
-            and player limit controls. Read access requires no authentication.",
-        "cloud-saves"        => "Key-value save data storage scoped per user and game. \
+            and player limit controls. Read access requires no authentication.".to_string(),
+        "cloud-saves" => "Key-value save data storage scoped per user and game. \
             Each game authenticates with its MID Secret, users authenticate with their MID ID. \
-            Supports versioned saves, conflict resolution, and up to 1MB per save slot.",
-        _                    => desc.as_str(),
+            Supports versioned saves, conflict resolution, and up to 1MB per save slot.".to_string(),
+        _ => service.description.clone().unwrap_or_default(),
     };
 
-    let on_close_arc  = std::sync::Arc::new(on_close);
-    let on_close_bg   = on_close_arc.clone();
-    let on_close_btn  = on_close_arc.clone();
+    let on_close_bg  = on_close.clone();
+    let on_close_btn = on_close.clone();
+    let on_close_ftr = on_close.clone();
 
     view! {
-        // Backdrop
-        <div class="service-modal-backdrop"
-             on:click=move |_| on_close_bg()></div>
-
-        // Panel
+        <div class="service-modal-backdrop" on:click=move |_| on_close_bg()></div>
         <div class="service-modal-panel" role="dialog" aria-modal="true">
-            // Header
+
             <div class="service-modal-header">
-                <div class="service-modal-icon-wrap">
-                    {icon}
-                </div>
+                <div class="service-modal-icon-wrap">{icon}</div>
                 <div class="service-modal-title-block">
                     <div class="service-modal-badges">
                         {if is_free {
@@ -324,13 +291,13 @@ fn ServiceModal(
                     <h2 class="service-modal-title">{name}</h2>
                     <code class="service-modal-slug">{slug}</code>
                 </div>
-                <button class="service-modal-close" on:click=move |_| on_close_btn()
+                <button class="service-modal-close"
+                        on:click=move |_| on_close_btn()
                         aria-label="Close">
                     <IconX class="icon-svg icon-sm" />
                 </button>
             </div>
 
-            // Body
             <div class="service-modal-body">
                 <div class="service-modal-section">
                     <h3 class="service-modal-section-title">"What is this?"</h3>
@@ -342,22 +309,18 @@ fn ServiceModal(
                     <div class="service-pricing-card">
                         {if is_free {
                             view! {
-                                <div>
-                                    <div class="service-price-amount">"Free"</div>
-                                    <div class="service-price-desc">
-                                        "No cost, no limits within fair use. "
-                                        "Available to all MmS account holders."
-                                    </div>
+                                <div class="service-price-amount">"Free"</div>
+                                <div class="service-price-desc">
+                                    "No cost, no limits within fair use. "
+                                    "Available to all MmS account holders."
                                 </div>
                             }.into_any()
                         } else {
                             view! {
-                                <div>
-                                    <div class="service-price-amount">"Pro"</div>
-                                    <div class="service-price-desc">
-                                        "Requires a Pro subscription. "
-                                        "Contact MidManStudio for access."
-                                    </div>
+                                <div class="service-price-amount">"Pro"</div>
+                                <div class="service-price-desc">
+                                    "Requires a Pro subscription. "
+                                    "Contact MidManStudio for access."
                                 </div>
                             }.into_any()
                         }}
@@ -377,36 +340,25 @@ fn ServiceModal(
                 </div>
             </div>
 
-            // Footer
             <div class="service-modal-footer">
-                <button class="btn btn-ghost btn-sm" on:click=move |_| on_close_arc()>
-                    "Close"
-                </button>
+                <button class="btn btn-ghost btn-sm"
+                        on:click=move |_| on_close_ftr()>"Close"</button>
                 {if is_active {
                     view! {
                         <button
                             class=move || {
-                                if is_subscribed {
-                                    "btn btn-ghost btn-sm"
-                                } else {
-                                    "btn btn-primary btn-sm"
-                                }
+                                if is_subscribed { "btn btn-ghost btn-sm" }
+                                else             { "btn btn-primary btn-sm" }
                             }
                             disabled=move || is_loading.get()
                             on:click=move |_| on_toggle()
                         >
                             {move || if is_loading.get() {
-                                view! {
-                                    <IconLoader class="icon-svg spin" />
-                                    <span>"Updating..."</span>
-                                }.into_any()
+                                view! { <IconLoader class="icon-svg spin" /><span>"Updating..."</span> }.into_any()
                             } else if is_subscribed {
                                 view! { <span>"Disable Service"</span> }.into_any()
                             } else {
-                                view! {
-                                    <IconCheck class="icon-svg icon-xs" />
-                                    <span>"Enable Service"</span>
-                                }.into_any()
+                                view! { <IconCheck class="icon-svg icon-xs" /><span>"Enable Service"</span> }.into_any()
                             }}
                         </button>
                     }.into_any()
