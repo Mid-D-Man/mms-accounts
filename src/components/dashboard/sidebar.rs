@@ -18,31 +18,22 @@ pub fn DashboardSidebar(
     let (is_expanded, set_is_expanded) = signal(false);
     let (is_pinned,   set_is_pinned)   = signal(false);
 
-    // Event handlers — signals are Copy so captured by value
     let handle_mouse_enter = move |_: web_sys::MouseEvent| {
-        if !is_pinned.get() {
-            set_is_expanded.set(true);
-        }
+        if !is_pinned.get() { set_is_expanded.set(true); }
     };
 
     let handle_mouse_leave = move |_: web_sys::MouseEvent| {
-        if !is_pinned.get() {
-            set_is_expanded.set(false);
-        }
+        if !is_pinned.get() { set_is_expanded.set(false); }
     };
 
     let toggle_pin = move |_: web_sys::MouseEvent| {
         let new_pinned = !is_pinned.get();
         set_is_pinned.set(new_pinned);
-        // When unpinning, collapse unless mouse is currently over
-        if !new_pinned {
-            set_is_expanded.set(false);
-        }
+        if !new_pinned { set_is_expanded.set(false); }
     };
 
     let nav = std::sync::Arc::new(on_navigate);
 
-    // Per-item nav closures — close mobile overlay on navigation
     let nav_overview = {
         let n = nav.clone();
         move |_: web_sys::MouseEvent| { n(DashView::Overview); set_mobile_open.set(false); }
@@ -78,12 +69,10 @@ pub fn DashboardSidebar(
         });
     };
 
-    // Whether sidebar should visually appear expanded
     let show_expanded = move || is_expanded.get() || is_pinned.get() || mobile_open.get();
 
     view! {
         <>
-        // Mobile overlay backdrop
         {move || if mobile_open.get() {
             view! {
                 <div
@@ -98,14 +87,14 @@ pub fn DashboardSidebar(
         <aside
             class=move || {
                 let mut c = "dash-sidebar".to_string();
-                if show_expanded()       { c.push_str(" expanded"); }
-                if mobile_open.get()     { c.push_str(" mobile-open"); }
+                if show_expanded()   { c.push_str(" expanded"); }
+                if mobile_open.get() { c.push_str(" mobile-open"); }
                 c
             }
             on:mouseenter=handle_mouse_enter
             on:mouseleave=handle_mouse_leave
         >
-            // ── Sidebar Header ─────────────────────────────────
+            // ── Header ────────────────────────────────────────
             <div class="sidebar-header">
                 <div class="sidebar-brand">
                     <img
@@ -126,7 +115,6 @@ pub fn DashboardSidebar(
                         <span class="brand-accounts">"Accounts"</span>
                     </div>
                 </div>
-                // Pin button — visible when expanded
                 <button
                     class="sidebar-pin-btn"
                     on:click=toggle_pin
@@ -140,7 +128,7 @@ pub fn DashboardSidebar(
                 </button>
             </div>
 
-            // ── User Info ──────────────────────────────────────
+            // ── User info ──────────────────────────────────────
             <div class="sidebar-user">
                 <div class="sidebar-avatar">
                     {move || {
@@ -170,14 +158,12 @@ pub fn DashboardSidebar(
                             </span>
                         }.into_any()
                     } else {
-                        view! {
-                            <span class="sidebar-role-badge">"User"</span>
-                        }.into_any()
+                        view! { <span class="sidebar-role-badge">"User"</span> }.into_any()
                     }}
                 </div>
             </div>
 
-            // ── Primary Navigation ─────────────────────────────
+            // ── Primary nav ────────────────────────────────────
             <nav class="sidebar-nav">
                 <div class="sidebar-nav-section">
                     <SidebarItem
@@ -219,7 +205,7 @@ pub fn DashboardSidebar(
                 </div>
             </nav>
 
-            // ── Footer Navigation ──────────────────────────────
+            // ── Footer ─────────────────────────────────────────
             <div class="sidebar-footer">
                 <SidebarItem
                     icon_slot=view! { <IconSettings class="icon-svg icon-sm" /> }.into_any()
@@ -228,18 +214,23 @@ pub fn DashboardSidebar(
                     on_click=nav_settings
                 />
 
+                // Admin panel — button navigates via set_hash (no <a> + on:click conflict)
                 {move || if profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false) {
                     view! {
-                        
-                            href="#admin"
+                        <button
                             class="sidebar-item sidebar-item--admin"
-                            on:click=move |_| set_mobile_open.set(false)
-                       <a >
+                            on:click=move |_| {
+                                set_mobile_open.set(false);
+                                if let Some(window) = web_sys::window() {
+                                    let _ = window.location().set_hash("admin");
+                                }
+                            }
+                        >
                             <span class="sidebar-item-icon">
                                 <IconShield class="icon-svg icon-sm" />
                             </span>
                             <span class="sidebar-item-label">"Admin Panel"</span>
-                        </a>
+                        </button>
                     }.into_any()
                 } else {
                     view! { <span></span> }.into_any()
@@ -260,8 +251,6 @@ pub fn DashboardSidebar(
     }
 }
 
-// ── Shared sidebar item ────────────────────────────────────────
-
 #[component]
 fn SidebarItem(
     icon_slot: AnyView,
@@ -272,11 +261,7 @@ fn SidebarItem(
     view! {
         <button
             class=move || {
-                if active.get() {
-                    "sidebar-item sidebar-item--active"
-                } else {
-                    "sidebar-item"
-                }
+                if active.get() { "sidebar-item sidebar-item--active" } else { "sidebar-item" }
             }
             on:click=on_click
         >
@@ -284,4 +269,4 @@ fn SidebarItem(
             <span class="sidebar-item-label">{label}</span>
         </button>
     }
-}
+    }
