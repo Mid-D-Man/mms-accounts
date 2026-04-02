@@ -234,7 +234,7 @@ pub fn DashboardSidebar(
                             href="#admin"
                             class="sidebar-item sidebar-item--admin"
                             on:click=move |_| set_mobile_open.set(false)
-                        >
+                       <a >
                             <span class="sidebar-item-icon">
                                 <IconShield class="icon-svg icon-sm" />
                             </span>
