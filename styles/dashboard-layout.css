@@ -1,0 +1,99 @@
+/* ── Root layout shell ───────────────────────────────────────── */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ── Main column ─────────────────────────────────────────────── */
+.dashboard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Top header bar ──────────────────────────────────────────── */
+.dash-header {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 1.25rem 2rem;
+  flex-shrink: 0;
+}
+
+.dash-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dash-header-title { font-size: 1.2rem; color: var(--text-primary); }
+
+.dash-header-sub {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  margin-top: 0.2rem;
+}
+
+.dash-header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.status-dot         { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.status-dot--active {
+  background: var(--cyan-neon);
+  box-shadow: 0 0 6px var(--cyan-neon);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+/* ── Scrollable content area ─────────────────────────────────── */
+.dashboard-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(65, 105, 225, 0.3) transparent;
+}
+
+.dashboard-content::-webkit-scrollbar       { width: 6px; }
+.dashboard-content::-webkit-scrollbar-track { background: transparent; }
+.dashboard-content::-webkit-scrollbar-thumb { background: rgba(65, 105, 225, 0.3); border-radius: 3px; }
+
+.dashboard-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .dashboard-main { margin-left: 0 !important; }
+
+  .dash-header {
+    padding: 1rem 1rem 1rem 4rem;
+    height: 60px;
+  }
+
+  .dashboard-content { padding: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+  .dash-header {
+    padding: 0.75rem 0.75rem 0.75rem 3.75rem;
+    height: 56px;
+  }
+
+  .dashboard-content { padding: 1rem; }
+}
