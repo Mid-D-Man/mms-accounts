@@ -8,7 +8,6 @@ use crate::components::{
     landing::LandingPage,
     auth::{AuthPage, ResetPasswordForm},
     dashboard::DashboardPage,
-    admin::AdminPage,
 };
 use crate::supabase::{SupabaseClient, User};
 use crate::supabase::client::{SUPABASE_URL, SUPABASE_ANON_KEY};
@@ -18,7 +17,6 @@ pub enum Route {
     Landing,
     Auth,
     Dashboard,
-    Admin,
 }
 
 impl Route {
@@ -36,13 +34,12 @@ impl Route {
         match route_part {
             "auth"      => Self::Auth,
             "dashboard" => Self::Dashboard,
-            "admin"     => Self::Admin,
+            // Old #admin hash now redirects into the dashboard
+            "admin"     => Self::Dashboard,
             _           => Self::Landing,
         }
     }
 }
-
-// ── Hash fragment parser — URI-decodes values to fix JWT corruption ──
 
 fn parse_hash_params() -> HashMap<String, String> {
     let hash = web_sys::window()
@@ -54,8 +51,6 @@ fn parse_hash_params() -> HashMap<String, String> {
 
     for pair in fragment.split('&') {
         if let Some((k, v)) = pair.split_once('=') {
-            // URI-decode the value — without this, URL-encoded JWT tokens
-            // arrive malformed (e.g. %2B instead of +) and fail signature checks
             let decoded_v = js_sys::decode_uri_component(v)
                 .ok()
                 .and_then(|jv| jv.as_string())
@@ -75,7 +70,7 @@ pub fn App() -> impl IntoView {
     Effect::new(move |_| {
         let params = parse_hash_params();
 
-        // ── Case 1: Password recovery ──────────────────────────
+        // Case 1: Password recovery
         if params.get("type").map(|s| s.as_str()) == Some("recovery") {
             if let Some(token) = params.get("access_token").cloned() {
                 set_recovery_token.set(Some(token));
@@ -87,7 +82,7 @@ pub fn App() -> impl IntoView {
             }
         }
 
-        // ── Case 2: OAuth callback ─────────────────────────────
+        // Case 2: OAuth callback
         if let (Some(access_token), Some(refresh_token)) = (
             params.get("access_token").cloned(),
             params.get("refresh_token").cloned(),
@@ -122,14 +117,14 @@ pub fn App() -> impl IntoView {
             return;
         }
 
-        // ── Case 3: Normal load — try refresh ──────────────────
+        // Case 3: Normal load — try refresh
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.try_refresh_session().await {
                 Ok(true) => {}
                 Ok(false) => {
                     let current = get_current_route();
-                    if current == Route::Dashboard || current == Route::Admin {
+                    if current == Route::Dashboard {
                         set_route.set(Route::Auth);
                         if let Some(w) = web_sys::window() {
                             let _ = w.location().set_hash("auth");
@@ -187,7 +182,6 @@ pub fn App() -> impl IntoView {
                         Route::Landing   => view! { <LandingPage />   }.into_any(),
                         Route::Auth      => view! { <AuthPage />      }.into_any(),
                         Route::Dashboard => view! { <DashboardPage /> }.into_any(),
-                        Route::Admin     => view! { <AdminPage />     }.into_any(),
                     }
                 }
             }}
@@ -206,4 +200,4 @@ pub fn navigate(hash: &str) {
     if let Some(window) = web_sys::window() {
         let _ = window.location().set_hash(hash);
     }
-}
+            }
