@@ -1,0 +1,166 @@
+/* ── Outer wrapper ───────────────────────────────────────────── */
+.admin-registry-view    { display: flex; flex-direction: column; max-width: 900px; }
+.admin-registry-content { display: flex; flex-direction: column; }
+
+.areg-loading {
+  display: flex; align-items: center; justify-content: center; padding: 4rem;
+}
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.areg-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.75rem; padding: 4rem 2rem; text-align: center;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.areg-empty-icon  { width: 40px; height: 40px; color: var(--text-muted); opacity: 0.4; }
+.areg-empty-title { font-size: 1rem; color: var(--text-primary); font-weight: 600; }
+.areg-empty-sub   { font-size: 0.875rem; color: var(--text-secondary); max-width: 320px; line-height: 1.7; }
+
+/* ── Count bar ───────────────────────────────────────────────── */
+.areg-list-wrap   { display: flex; flex-direction: column; gap: 0.75rem; }
+.areg-count-bar {
+  font-size: 0.875rem; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.areg-count-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 22px; padding: 0 6px;
+  background: rgba(65,105,225,0.12); border: 1px solid rgba(65,105,225,0.3);
+  border-radius: 4px; font-family: var(--font-mono);
+  font-size: 0.75rem; font-weight: 700; color: var(--cobalt-light);
+}
+
+/* ── List ────────────────────────────────────────────────────── */
+.areg-list {
+  display: flex; flex-direction: column; gap: 0;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+/* ── Row ─────────────────────────────────────────────────────── */
+.areg-row {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+.areg-row:last-child        { border-bottom: none; }
+.areg-row--expanded         { background: rgba(65,105,225,0.02); }
+.areg-row:hover:not(.areg-row--expanded) { background: rgba(65,105,225,0.015); }
+
+.areg-row-main {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1rem 1.25rem; flex-wrap: wrap;
+}
+
+.areg-row-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cobalt-faint); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); color: var(--cobalt-light);
+}
+
+/* ── Row info ────────────────────────────────────────────────── */
+.areg-row-info  { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.areg-row-top   { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.areg-filename  { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+
+.areg-badge {
+  display: inline-flex; align-items: center;
+  font-family: var(--font-mono); font-size: 0.6rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.15rem 0.5rem; border-radius: 3px; border: 1px solid;
+  background: var(--cobalt-faint); border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+.areg-badge--cat {
+  background: rgba(65,105,225,0.1); border-color: rgba(65,105,225,0.3);
+  color: var(--cobalt-light);
+}
+
+.areg-row-meta   { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.areg-meta-item  { display: flex; flex-direction: column; gap: 0.1rem; }
+.areg-meta-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.areg-meta-value { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); }
+
+/* ── Row action buttons ──────────────────────────────────────── */
+.areg-row-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+
+.areg-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.375rem 0.75rem; border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: 0.68rem;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border: 1px solid var(--border-subtle);
+  background: var(--cobalt-faint); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.areg-btn:hover:not(:disabled) { border-color: var(--cobalt-light); color: var(--cobalt-light); }
+.areg-btn:disabled              { opacity: 0.45; cursor: not-allowed; }
+.areg-btn--active               { background: rgba(65,105,225,0.12); border-color: var(--cobalt-light); color: var(--cobalt-light); }
+.areg-btn--expand               { min-width: 36px; justify-content: center; }
+
+.areg-btn--approve {
+  background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.2);
+  color: var(--cyan-neon);
+}
+.areg-btn--approve:hover:not(:disabled) {
+  background: rgba(0,212,255,0.12); border-color: var(--cyan-neon);
+}
+
+.areg-btn--reject {
+  background: var(--crimson-faint); border-color: rgba(220,20,60,0.2);
+  color: var(--crimson);
+}
+.areg-btn--reject:hover:not(:disabled) {
+  background: rgba(220,20,60,0.12); border-color: var(--crimson);
+}
+.areg-btn--reject.areg-btn--active {
+  background: rgba(220,20,60,0.12); border-color: var(--crimson);
+}
+
+/* ── Expanded details section ────────────────────────────────── */
+.areg-details           { padding: 0 1.25rem 1.25rem; }
+.areg-details--hidden   { display: none; }
+.areg-details-grid      { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.areg-detail-block      { display: flex; flex-direction: column; gap: 0.35rem; }
+.areg-detail-label {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+}
+.areg-detail-text       { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.65; }
+
+/* ── Preview ─────────────────────────────────────────────────── */
+.areg-preview-bar { margin-bottom: 0.75rem; }
+.areg-preview-btn { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; }
+.areg-preview-btn--active { color: var(--cyan-neon); border-color: rgba(0,212,255,0.35); }
+
+.areg-preview-wrap { margin-bottom: 1rem; border-radius: var(--radius); overflow: hidden; }
+.areg-preview-loading {
+  display: flex; align-items: center; justify-content: center; padding: 2rem;
+  background: var(--bg-base); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+.areg-preview-code {
+  margin: 0; padding: 1rem 1.25rem;
+  background: var(--bg-base); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius); font-family: var(--font-mono);
+  font-size: 0.78rem; line-height: 1.75; color: var(--text-primary);
+  overflow-x: auto; max-height: 400px; overflow-y: auto;
+  white-space: pre;
+}
+.areg-preview-code code { background: none; border: none; padding: 0; font-size: inherit; color: inherit; }
+
+/* ── Rejection form ──────────────────────────────────────────── */
+.areg-reject-form {
+  background: var(--crimson-faint); border: 1px solid rgba(220,20,60,0.2);
+  border-radius: var(--radius); padding: 1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.875rem;
+}
+.areg-reject-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+@media (max-width: 768px) {
+  .admin-registry-view { max-width: 100%; }
+  .areg-details-grid   { grid-template-columns: 1fr; }
+  .areg-row-actions    { flex-wrap: wrap; }
+  }
