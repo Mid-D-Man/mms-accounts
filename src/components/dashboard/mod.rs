@@ -6,7 +6,9 @@ pub mod settings;
 pub mod credentials;
 pub mod services;
 pub mod registry;
-pub mod admin_view;
+pub mod admin_users;
+pub mod admin_registry;
+// admin_r2 and admin_permissions arrive in response 3
 
 pub use sidebar::*;
 pub use header::*;
@@ -16,7 +18,8 @@ pub use settings::*;
 pub use credentials::*;
 pub use services::*;
 pub use registry::*;
-pub use admin_view::*;
+pub use admin_users::*;
+pub use admin_registry::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -24,15 +27,25 @@ use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
 use crate::components::icons::IconMenu;
 
+// ── Dashboard view enum ────────────────────────────────────────
+// Admin-only variants are rendered only when profile.role = "admin".
+// Sidebar CSS hides the admin section for non-admins so they are never
+// reachable via normal navigation.
+
 #[derive(Clone, PartialEq)]
 pub enum DashView {
+    // ── User views ─────────────────────────────────────────────
     Overview,
     Profile,
     Settings,
     Credentials,
     Services,
     Registry,
-    Admin,
+    // ── Admin-only views ───────────────────────────────────────
+    AdminUsers,      // User table — was DashView::Admin
+    AdminRegistry,   // Pending submission review
+    AdminR2,         // R2 file browser  (component in response 3)
+    AdminPermissions,// Role management   (component in response 3)
 }
 
 #[component]
@@ -56,7 +69,7 @@ pub fn DashboardPage() -> impl IntoView {
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.get_profile(&user_id).await {
-                Ok(p) => { set_profile.set(Some(p)); set_loading.set(false); }
+                Ok(p)  => { set_profile.set(Some(p)); set_loading.set(false); }
                 Err(_) => {
                     SupabaseClient::clear_session();
                     if let Some(window) = web_sys::window() {
@@ -105,10 +118,20 @@ pub fn DashboardPage() -> impl IntoView {
                             }.into_any(),
                             DashView::Settings    => view! { <SettingsView /> }.into_any(),
                             DashView::Credentials => view! { <CredentialsView profile=profile /> }.into_any(),
-                            // ServicesView no longer takes a profile prop
                             DashView::Services    => view! { <ServicesView /> }.into_any(),
                             DashView::Registry    => view! { <RegistryView profile=profile /> }.into_any(),
-                            DashView::Admin       => view! { <AdminDashView profile=profile /> }.into_any(),
+                            // ── Admin-only ─────────────────────
+                            DashView::AdminUsers =>
+                                view! { <AdminUsersView profile=profile /> }.into_any(),
+                            DashView::AdminRegistry =>
+                                view! { <AdminRegistryView profile=profile /> }.into_any(),
+                            // Placeholder — replaced in response 3
+                            DashView::AdminR2 | DashView::AdminPermissions =>
+                                view! {
+                                    <div class="dashboard-loading">
+                                        <div class="spinner-wrap"><div class="spinner"></div></div>
+                                    </div>
+                                }.into_any(),
                         }
                     }}
                 </main>
