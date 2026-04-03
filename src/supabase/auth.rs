@@ -90,7 +90,30 @@ struct NewSubmissionBody {
     status:                String,
 }
 
-// Flexible signup response
+#[derive(Serialize)]
+struct ApproveBody {
+    submission_id: String,
+}
+
+#[derive(Serialize)]
+struct RejectBody {
+    submission_id: String,
+    note:          String,
+}
+
+#[derive(Serialize)]
+struct DeleteR2Body {
+    key: String,
+}
+
+#[derive(Serialize)]
+struct MoveR2Body {
+    from_key: String,
+    to_key:   String,
+}
+
+// ── Flexible signup response ───────────────────────────────────
+
 #[derive(Debug, Deserialize)]
 struct SignUpResponse {
     access_token:  Option<String>,
@@ -130,7 +153,6 @@ pub async fn generate_mid_secret() -> Result<(String, String, String), String> {
     Ok((full_secret, prefix, hash_hex))
 }
 
-/// Generate a short unique path ID using random bytes + timestamp.
 pub async fn generate_path_id() -> Result<String, String> {
     let window = web_sys::window().ok_or("No window")?;
     let crypto = window.crypto().map_err(|_| "No crypto")?;
@@ -151,10 +173,8 @@ async fn sha256_hex(data: &[u8]) -> Result<String, String> {
     let subtle = crypto.subtle();
 
     let data_array = Uint8Array::from(data);
-
     let promise = subtle.digest_with_str_and_buffer_source("SHA-256", &data_array)
         .map_err(|_| "SubtleCrypto.digest failed")?;
-
     let result = JsFuture::from(promise).await
         .map_err(|_| "SHA-256 promise rejected")?;
 
@@ -169,14 +189,27 @@ pub async fn copy_to_clipboard(text: &str) -> Result<(), String> {
     let window    = web_sys::window().ok_or("No window")?;
     let navigator = window.navigator();
     let clipboard = navigator.clipboard();
-
-    let promise = clipboard.write_text(text);
+    let promise   = clipboard.write_text(text);
     JsFuture::from(promise).await.map_err(|_| "Clipboard write failed")?;
-
     Ok(())
 }
 
-// ── Auth methods ───────────────────────────────────────────────
+// ── Helper: parse error from dixscript-docs response ──────────
+
+async fn parse_docs_error(res: gloo_net::http::Response) -> String {
+    let text = res.text().await.unwrap_or_default();
+    serde_json::from_str::<serde_json::Value>(&text)
+        .ok()
+        .and_then(|v| {
+            v.get("error")
+                .or_else(|| v.get("message"))
+                .and_then(|e| e.as_str())
+                .map(String::from)
+        })
+        .unwrap_or(text)
+}
+
+// ── SupabaseClient impl ────────────────────────────────────────
 
 impl SupabaseClient {
 
@@ -663,7 +696,7 @@ impl SupabaseClient {
         Ok(())
     }
 
-    // ── Registry methods ───────────────────────────────────────
+    // ── Registry — user submission methods ─────────────────────
 
     pub async fn list_user_submissions(&self, user_id: &str) -> Result<Vec<RegistrySubmission>, String> {
         let token = LocalStorage::get::<String>("mms_access_token")
@@ -687,7 +720,6 @@ impl SupabaseClient {
         res.json::<Vec<RegistrySubmission>>().await.map_err(|e| format!("Parse error: {}", e))
     }
 
-    /// Upload a file to Supabase Storage. `bucket_path` is "{bucket}/{file_path}".
     pub async fn upload_registry_file(
         &self,
         bucket:    &str,
@@ -698,8 +730,6 @@ impl SupabaseClient {
             .map_err(|_| "Not authenticated".to_string())?;
 
         let url = self.storage_url(bucket, file_path);
-
-        // Convert Vec<u8> to Uint8Array for the request body
         let arr = Uint8Array::from(data.as_slice());
 
         let res = Request::post(&url)
@@ -763,6 +793,164 @@ impl SupabaseClient {
             .map_err(|e| format!("Parse error: {}", e))?;
 
         submissions.into_iter().next().ok_or_else(|| "No submission returned".to_string())
+    }
+
+    // ── Registry — admin review methods ───────────────────────
+    // These use the admin's Supabase JWT directly against the DB.
+    // The RLS policy "admin_read_all_submissions" must be created
+    // in Supabase for this to return results.
+
+    pub async fn get_pending_submissions(&self) -> Result<Vec<RegistrySubmission>, String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let url = format!(
+            "{}?status=eq.pending&order=submitted_at.desc&select=*",
+            self.rest_url("registry_submissions")
+        );
+
+        let res = Request::get(&url)
+            .header("apikey",        &self.anon_key)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Accept",        "application/json")
+            .send().await.map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            return Err(
+                "Failed to fetch pending submissions. Ensure admin RLS policy is applied.".to_string()
+            );
+        }
+
+        res.json::<Vec<RegistrySubmission>>().await
+            .map_err(|e| format!("Parse error: {}", e))
+    }
+
+    /// Approve a pending submission.
+    /// Calls dixscript-docs which fetches the file from Supabase Storage,
+    /// copies it to R2 packages/, creates the .meta.json sidecar,
+    /// then deletes the file from Supabase Storage and updates the DB record.
+    pub async fn approve_submission(&self, submission_id: &str) -> Result<(), String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let url  = format!("{}/api/registry/approve", DIXSCRIPT_DOCS_URL);
+        let body = ApproveBody { submission_id: submission_id.to_string() };
+
+        let res = Request::post(&url)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Content-Type",  "application/json")
+            .json(&body).map_err(|e| format!("Request build error: {}", e))?
+            .send().await.map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            return Err(parse_docs_error(res).await);
+        }
+        Ok(())
+    }
+
+    /// Reject a pending submission with an optional admin note.
+    /// Calls dixscript-docs which deletes the file from Supabase Storage
+    /// and updates the DB record with status = rejected.
+    pub async fn reject_submission(&self, submission_id: &str, note: &str) -> Result<(), String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let url  = format!("{}/api/registry/reject", DIXSCRIPT_DOCS_URL);
+        let body = RejectBody {
+            submission_id: submission_id.to_string(),
+            note:          note.to_string(),
+        };
+
+        let res = Request::post(&url)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Content-Type",  "application/json")
+            .json(&body).map_err(|e| format!("Request build error: {}", e))?
+            .send().await.map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            return Err(parse_docs_error(res).await);
+        }
+        Ok(())
+    }
+
+    // ── R2 file management methods ─────────────────────────────
+    // These call dixscript-docs which performs operations on the
+    // Cloudflare R2 bucket. All require admin JWT.
+
+    pub async fn list_r2_files(&self, prefix: &str) -> Result<Vec<R2FileInfo>, String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let prefix_enc = js_sys::encode_uri_component(prefix)
+            .as_string()
+            .unwrap_or_else(|| prefix.to_string());
+
+        let url = format!(
+            "{}/api/admin/r2/list?prefix={}",
+            DIXSCRIPT_DOCS_URL, prefix_enc
+        );
+
+        let res = Request::get(&url)
+            .header("Authorization", &format!("Bearer {}", token))
+            .send().await.map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            return Err(parse_docs_error(res).await);
+        }
+
+        #[derive(Deserialize)]
+        struct ListResp { files: Vec<R2FileInfo> }
+
+        let resp: ListResp = res.json().await
+            .map_err(|e| format!("Parse error: {}", e))?;
+
+        Ok(resp.files)
+    }
+
+    /// Delete a file from R2 by its full key (e.g. "packages/game/base.mdix").
+    /// Also deletes the .meta.json sidecar if present.
+    pub async fn delete_r2_file(&self, key: &str) -> Result<(), String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let url  = format!("{}/api/admin/r2/delete", DIXSCRIPT_DOCS_URL);
+        let body = DeleteR2Body { key: key.to_string() };
+
+        let res = Request::post(&url)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Content-Type",  "application/json")
+            .json(&body).map_err(|e| format!("Request build error: {}", e))?
+            .send().await.map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            return Err(parse_docs_error(res).await);
+        }
+        Ok(())
+    }
+
+    /// Move/rename a file in R2.
+    /// Copies content to the new key then deletes the old key.
+    /// Also moves the .meta.json sidecar if present.
+    pub async fn move_r2_file(&self, from_key: &str, to_key: &str) -> Result<(), String> {
+        let token = LocalStorage::get::<String>("mms_access_token")
+            .map_err(|_| "Not authenticated".to_string())?;
+
+        let url  = format!("{}/api/admin/r2/move", DIXSCRIPT_DOCS_URL);
+        let body = MoveR2Body {
+            from_key: from_key.to_string(),
+            to_key:   to_key.to_string(),
+        };
+
+        let res = Request::post(&url)
+            .header("Authorization", &format!("Bearer {}", token))
+            .header("Content-Type",  "application/json")
+            .json(&body).map_err(|e| format!("Request build error: {}", e))?
+            .send().await.map_err(|e| format!("Network error: {}", e))?;
+
+        if !res.ok() {
+            return Err(parse_docs_error(res).await);
+        }
+        Ok(())
     }
 
     // ── Session helpers ────────────────────────────────────────
