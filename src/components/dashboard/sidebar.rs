@@ -3,7 +3,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::supabase::Profile;
 use crate::components::icons::{
     IconHome, IconUser, IconSettings, IconLogOut, IconShield, IconKey,
-    IconLayers, IconPackage, IconChevronsRight, IconChevronsLeft,
+    IconLayers, IconPackage, IconUsers, IconChevronsRight, IconChevronsLeft,
 };
 use super::DashView;
 
@@ -32,16 +32,17 @@ pub fn DashboardSidebar(
 
     let nav = std::sync::Arc::new(on_navigate);
 
-    // Build one closure per nav target — each closure captures a clone of nav.
-    // IMPORTANT: these are NOT inside any reactive closure, so they're moved
-    // once at construction time and implement FnMut correctly.
-    let nav_overview = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Overview);    set_mobile_open.set(false); } };
-    let nav_profile  = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Profile);     set_mobile_open.set(false); } };
-    let nav_creds    = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Credentials); set_mobile_open.set(false); } };
-    let nav_services = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Services);    set_mobile_open.set(false); } };
-    let nav_registry = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Registry);    set_mobile_open.set(false); } };
-    let nav_settings = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Settings);    set_mobile_open.set(false); } };
-    let nav_admin    = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Admin);       set_mobile_open.set(false); } };
+    // ── One closure per destination ────────────────────────────
+    let nav_overview       = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Overview);       set_mobile_open.set(false); } };
+    let nav_profile        = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Profile);        set_mobile_open.set(false); } };
+    let nav_creds          = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Credentials);    set_mobile_open.set(false); } };
+    let nav_services       = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Services);       set_mobile_open.set(false); } };
+    let nav_registry       = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Registry);       set_mobile_open.set(false); } };
+    let nav_settings       = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::Settings);       set_mobile_open.set(false); } };
+    // Admin-only
+    let nav_admin_users    = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::AdminUsers);     set_mobile_open.set(false); } };
+    let nav_admin_registry = { let n = nav.clone(); move |_: web_sys::MouseEvent| { n(DashView::AdminRegistry);  set_mobile_open.set(false); } };
+    // nav_admin_r2 and nav_admin_permissions added in response 3
 
     let handle_signout = move |_: web_sys::MouseEvent| {
         let client = crate::supabase::SupabaseClient::new();
@@ -94,7 +95,7 @@ pub fn DashboardSidebar(
                 <button class="sidebar-pin-btn" on:click=toggle_pin
                         title=move || if is_pinned.get() { "Unpin" } else { "Pin open" }>
                     {move || if is_pinned.get() {
-                        view! { <IconChevronsLeft class="icon-svg icon-sm" /> }.into_any()
+                        view! { <IconChevronsLeft  class="icon-svg icon-sm" /> }.into_any()
                     } else {
                         view! { <IconChevronsRight class="icon-svg icon-sm" /> }.into_any()
                     }}
@@ -132,21 +133,22 @@ pub fn DashboardSidebar(
 
             // ── Navigation ─────────────────────────────────────
             <nav class="sidebar-nav">
+                // ── Account ─────────────────────────────────────
                 <div class="sidebar-nav-section">
                     <SidebarItem
-                        icon_slot=view! { <IconHome class="icon-svg icon-sm" /> }.into_any()
+                        icon_slot=view! { <IconHome  class="icon-svg icon-sm" /> }.into_any()
                         label="Overview"
                         active=Signal::derive(move || active_view.get() == DashView::Overview)
                         on_click=nav_overview
                     />
                     <SidebarItem
-                        icon_slot=view! { <IconUser class="icon-svg icon-sm" /> }.into_any()
+                        icon_slot=view! { <IconUser  class="icon-svg icon-sm" /> }.into_any()
                         label="Profile"
                         active=Signal::derive(move || active_view.get() == DashView::Profile)
                         on_click=nav_profile
                     />
                     <SidebarItem
-                        icon_slot=view! { <IconKey class="icon-svg icon-sm" /> }.into_any()
+                        icon_slot=view! { <IconKey   class="icon-svg icon-sm" /> }.into_any()
                         label="Credentials"
                         active=Signal::derive(move || active_view.get() == DashView::Credentials)
                         on_click=nav_creds
@@ -155,10 +157,11 @@ pub fn DashboardSidebar(
 
                 <div class="sidebar-nav-divider"></div>
 
+                // ── Platform ─────────────────────────────────────
                 <div class="sidebar-nav-section">
                     <div class="sidebar-nav-label">"Platform"</div>
                     <SidebarItem
-                        icon_slot=view! { <IconLayers class="icon-svg icon-sm" /> }.into_any()
+                        icon_slot=view! { <IconLayers  class="icon-svg icon-sm" /> }.into_any()
                         label="Services"
                         active=Signal::derive(move || active_view.get() == DashView::Services)
                         on_click=nav_services
@@ -171,8 +174,8 @@ pub fn DashboardSidebar(
                     />
                 </div>
 
-                // Admin section — always rendered but hidden via CSS for non-admins.
-                // This avoids putting nav_admin inside a reactive FnMut closure.
+                // ── Admin — CSS-hidden for non-admins ─────────────
+                // Always rendered so closures are not inside reactive FnMut.
                 <div class=move || {
                     if profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false) {
                         "sidebar-admin-section"
@@ -184,11 +187,18 @@ pub fn DashboardSidebar(
                     <div class="sidebar-nav-section">
                         <div class="sidebar-nav-label">"Administration"</div>
                         <SidebarItem
-                            icon_slot=view! { <IconShield class="icon-svg icon-sm" /> }.into_any()
-                            label="Admin Panel"
-                            active=Signal::derive(move || active_view.get() == DashView::Admin)
-                            on_click=nav_admin
+                            icon_slot=view! { <IconUsers   class="icon-svg icon-sm" /> }.into_any()
+                            label="Users"
+                            active=Signal::derive(move || active_view.get() == DashView::AdminUsers)
+                            on_click=nav_admin_users
                         />
+                        <SidebarItem
+                            icon_slot=view! { <IconPackage class="icon-svg icon-sm" /> }.into_any()
+                            label="Registry Review"
+                            active=Signal::derive(move || active_view.get() == DashView::AdminRegistry)
+                            on_click=nav_admin_registry
+                        />
+                        // R2 Files and Permissions items added in response 3
                     </div>
                 </div>
             </nav>
