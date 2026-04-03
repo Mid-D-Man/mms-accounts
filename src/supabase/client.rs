@@ -4,6 +4,11 @@ use gloo_storage::{LocalStorage, Storage};
 pub const SUPABASE_URL: &str = env!("SUPABASE_URL");
 pub const SUPABASE_ANON_KEY: &str = env!("SUPABASE_ANON_KEY");
 
+/// Public URL of the dixscript-docs Cloudflare Pages site.
+/// Admin operations (approve/reject submissions, R2 management) call
+/// endpoints there, authenticated via the admin's Supabase JWT.
+pub const DIXSCRIPT_DOCS_URL: &str = "https://dixscript-docs.pages.dev";
+
 #[derive(Clone)]
 pub struct SupabaseClient {
     pub(crate) url:      String,
@@ -202,10 +207,50 @@ impl RegistrySubmission {
     }
 }
 
+// ── R2 File Info ───────────────────────────────────────────────
+// Returned by dixscript-docs /api/admin/r2/list endpoint.
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct R2FileInfo {
+    pub key:      String,
+    pub name:     String,
+    pub size:     u64,
+    pub uploaded: Option<String>,
+    pub is_meta:  bool,
+}
+
+impl R2FileInfo {
+    pub fn display_size(&self) -> String {
+        if self.size < 1024 {
+            format!("{} B", self.size)
+        } else {
+            format!("{:.1} KB", self.size as f64 / 1024.0)
+        }
+    }
+
+    pub fn formatted_uploaded(&self) -> String {
+        self.uploaded.as_deref()
+            .and_then(|s| s.get(..10))
+            .unwrap_or("—")
+            .to_string()
+    }
+
+    /// Derive the logical category from the R2 key path.
+    /// "packages/game/base_types.mdix" → "game"
+    pub fn category(&self) -> String {
+        let parts: Vec<&str> = self.key.splitn(3, '/').collect();
+        if parts.len() >= 3 && parts[0] == "packages" {
+            parts[1].to_string()
+        } else {
+            "—".to_string()
+        }
+    }
+}
+
 // ── Supabase error ─────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
 pub struct SupabaseError {
     pub message: String,
     pub error:   Option<String>,
-}
+        }
