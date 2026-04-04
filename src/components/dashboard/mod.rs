@@ -8,7 +8,8 @@ pub mod services;
 pub mod registry;
 pub mod admin_users;
 pub mod admin_registry;
-// admin_r2 and admin_permissions arrive in response 3
+pub mod admin_r2;
+pub mod admin_permissions;
 
 pub use sidebar::*;
 pub use header::*;
@@ -20,17 +21,14 @@ pub use services::*;
 pub use registry::*;
 pub use admin_users::*;
 pub use admin_registry::*;
+pub use admin_r2::*;
+pub use admin_permissions::*;
 
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
 use crate::components::icons::IconMenu;
-
-// ── Dashboard view enum ────────────────────────────────────────
-// Admin-only variants are rendered only when profile.role = "admin".
-// Sidebar CSS hides the admin section for non-admins so they are never
-// reachable via normal navigation.
 
 #[derive(Clone, PartialEq)]
 pub enum DashView {
@@ -42,10 +40,10 @@ pub enum DashView {
     Services,
     Registry,
     // ── Admin-only views ───────────────────────────────────────
-    AdminUsers,      // User table — was DashView::Admin
-    AdminRegistry,   // Pending submission review
-    AdminR2,         // R2 file browser  (component in response 3)
-    AdminPermissions,// Role management   (component in response 3)
+    AdminUsers,
+    AdminRegistry,
+    AdminR2,
+    AdminPermissions,
 }
 
 #[component]
@@ -125,13 +123,10 @@ pub fn DashboardPage() -> impl IntoView {
                                 view! { <AdminUsersView profile=profile /> }.into_any(),
                             DashView::AdminRegistry =>
                                 view! { <AdminRegistryView profile=profile /> }.into_any(),
-                            // Placeholder — replaced in response 3
-                            DashView::AdminR2 | DashView::AdminPermissions =>
-                                view! {
-                                    <div class="dashboard-loading">
-                                        <div class="spinner-wrap"><div class="spinner"></div></div>
-                                    </div>
-                                }.into_any(),
+                            DashView::AdminR2 =>
+                                view! { <AdminR2View profile=profile /> }.into_any(),
+                            DashView::AdminPermissions =>
+                                view! { <AdminPermissionsView profile=profile /> }.into_any(),
                         }
                     }}
                 </main>
