@@ -287,7 +287,6 @@ pub fn IconAlertTriangle(#[prop(default = "icon-svg")] class: &'static str) -> i
     }
 }
 
-/// Hamburger menu icon — mobile nav toggle
 #[component]
 pub fn IconMenu(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -301,7 +300,6 @@ pub fn IconMenu(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoV
     }
 }
 
-/// Layers / services icon
 #[component]
 pub fn IconLayers(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -315,7 +313,6 @@ pub fn IconLayers(#[prop(default = "icon-svg")] class: &'static str) -> impl Int
     }
 }
 
-/// Package / registry icon
 #[component]
 pub fn IconPackage(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -330,7 +327,6 @@ pub fn IconPackage(#[prop(default = "icon-svg")] class: &'static str) -> impl In
     }
 }
 
-/// Upload icon — file submission
 #[component]
 pub fn IconUpload(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -344,7 +340,6 @@ pub fn IconUpload(#[prop(default = "icon-svg")] class: &'static str) -> impl Int
     }
 }
 
-/// Double chevrons right — expand/pin sidebar
 #[component]
 pub fn IconChevronsRight(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -357,7 +352,6 @@ pub fn IconChevronsRight(#[prop(default = "icon-svg")] class: &'static str) -> i
     }
 }
 
-/// Double chevrons left — collapse/unpin sidebar
 #[component]
 pub fn IconChevronsLeft(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -370,7 +364,6 @@ pub fn IconChevronsLeft(#[prop(default = "icon-svg")] class: &'static str) -> im
     }
 }
 
-/// Cloud saves icon
 #[component]
 pub fn IconCloud(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -382,7 +375,6 @@ pub fn IconCloud(#[prop(default = "icon-svg")] class: &'static str) -> impl Into
     }
 }
 
-/// Trophy / leaderboards icon
 #[component]
 pub fn IconTrophy(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -399,7 +391,6 @@ pub fn IconTrophy(#[prop(default = "icon-svg")] class: &'static str) -> impl Int
     }
 }
 
-/// Activity / analytics icon
 #[component]
 pub fn IconActivity(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -411,7 +402,6 @@ pub fn IconActivity(#[prop(default = "icon-svg")] class: &'static str) -> impl I
     }
 }
 
-/// File text — submissions / documents
 #[component]
 pub fn IconFileText(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -427,7 +417,6 @@ pub fn IconFileText(#[prop(default = "icon-svg")] class: &'static str) -> impl I
     }
 }
 
-/// Clock icon — pending states
 #[component]
 pub fn IconClock(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
     view! {
@@ -439,3 +428,43 @@ pub fn IconClock(#[prop(default = "icon-svg")] class: &'static str) -> impl Into
         </svg>
     }
 }
+
+/// Folder icon — R2 directory navigation
+#[component]
+pub fn IconFolder(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+    }
+}
+
+/// Refresh / reload icon
+#[component]
+pub fn IconRefresh(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+    }
+}
+
+/// Database / permissions icon
+#[component]
+pub fn IconDatabase(#[prop(default = "icon-svg")] class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+    }
+    }
