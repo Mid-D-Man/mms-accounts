@@ -1,0 +1,63 @@
+/* ── Outer wrapper ───────────────────────────────────────────── */
+.admin-permissions-view    { display: flex; flex-direction: column; max-width: 960px; }
+.admin-permissions-content { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* ── Self badge ──────────────────────────────────────────────── */
+.perm-self-badge {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  letter-spacing: 0.06em; color: var(--text-muted);
+  background: var(--cobalt-faint); border: 1px solid var(--border-subtle);
+  border-radius: 3px; padding: 0.1rem 0.4rem;
+}
+
+/* ── Self note in actions cell ───────────────────────────────── */
+.perm-self-note {
+  font-family: var(--font-mono); font-size: 0.7rem;
+  letter-spacing: 0.04em; color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Processing indicator ────────────────────────────────────── */
+.perm-processing {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.8125rem; color: var(--text-secondary);
+}
+
+/* ── Confirm row ─────────────────────────────────────────────── */
+.perm-confirm-row {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+}
+
+.perm-confirm-label {
+  font-size: 0.8125rem; font-weight: 600; color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.perm-btn--promote {
+  white-space: nowrap;
+}
+
+.perm-btn--demote {
+  white-space: nowrap;
+  color: var(--crimson) !important;
+  border-color: rgba(220,20,60,0.3) !important;
+}
+.perm-btn--demote:hover:not(:disabled) {
+  background: var(--crimson-faint) !important;
+  border-color: var(--crimson) !important;
+}
+
+/* ── Email cell override ─────────────────────────────────────── */
+.admin-cell--email {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-permissions-view { max-width: 100%; }
+  .perm-confirm-row       { flex-direction: column; align-items: flex-start; }
+    }
