@@ -3,6 +3,7 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use std::sync::Arc;
+use gloo_storage::Storage;
 use crate::supabase::{Profile, R2FileInfo};
 use crate::components::icons::{
     IconFolder, IconFileText, IconTrash, IconRefresh, IconLoader,
@@ -72,7 +73,6 @@ async fn api_move(from_key: &str, to_key: &str, token: &str) -> Result<(), Strin
 pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
     let is_admin = move || profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false);
 
-    // ── Signals ────────────────────────────────────────────────
     let (files,          set_files)          = signal(Vec::<R2FileInfo>::new());
     let (loading,        set_loading)        = signal(true);
     let (error,          set_error)          = signal(String::new());
@@ -94,8 +94,8 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
     let (uploading,      set_uploading)      = signal(false);
     let (upload_error,   set_upload_error)   = signal(String::new());
 
-    // ── Load files — wrapped in Arc so it can be cloned freely ─
-    let load_files: Arc<dyn Fn() + 'static> = Arc::new(move || {
+    // ── load_files: Arc<dyn Fn() + Send + Sync> ───────────────
+    let load_files: Arc<dyn Fn() + Send + Sync + 'static> = Arc::new(move || {
         let prefix_val = prefix.get();
         set_loading.set(true);
         set_error.set(String::new());
@@ -112,7 +112,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         });
     });
 
-    // Initial load
     {
         let lf = load_files.clone();
         Effect::new(move |_| {
@@ -121,8 +120,8 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         });
     }
 
-    // ── Delete — Arc<dyn Fn(String)> ──────────────────────────
-    let handle_delete: Arc<dyn Fn(String) + 'static> = {
+    // ── handle_delete: Arc<dyn Fn(String) + Send + Sync> ──────
+    let handle_delete: Arc<dyn Fn(String) + Send + Sync + 'static> = {
         let lf = load_files.clone();
         Arc::new(move |key: String| {
             let lf = lf.clone();
@@ -148,8 +147,8 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         })
     };
 
-    // ── Rename — Arc<dyn Fn(String, String)> ──────────────────
-    let handle_rename: Arc<dyn Fn(String, String) + 'static> = {
+    // ── handle_rename: Arc<dyn Fn(String, String) + Send + Sync> ─
+    let handle_rename: Arc<dyn Fn(String, String) + Send + Sync + 'static> = {
         let lf = load_files.clone();
         Arc::new(move |from_key: String, to_key: String| {
             let lf = lf.clone();
@@ -180,8 +179,8 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         })
     };
 
-    // ── Upload — Arc<dyn Fn(SubmitEvent)> ─────────────────────
-    let handle_upload: Arc<dyn Fn(web_sys::SubmitEvent) + 'static> = {
+    // ── handle_upload: Arc<dyn Fn(SubmitEvent) + Send + Sync> ─
+    let handle_upload: Arc<dyn Fn(web_sys::SubmitEvent) + Send + Sync + 'static> = {
         let lf = load_files.clone();
         Arc::new(move |ev: web_sys::SubmitEvent| {
             ev.prevent_default();
@@ -250,7 +249,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         })
     };
 
-    // handle_file_change only captures Copy signals — no Arc needed
     let handle_file_change = move |ev: web_sys::Event| {
         let input = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
         if let Some(input) = input {
@@ -263,9 +261,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
         }
     };
 
-    // ── View ───────────────────────────────────────────────────
-    // The outer reactive closure captures these Arcs by move.
-    // Inside, we call .clone() on them so they're never consumed.
     view! {
         <div class="admin-r2-view">
             {
@@ -282,8 +277,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                         </div>
                     }.into_any()
                 } else {
-                    // Clone Arcs for the closures created in THIS invocation.
-                    // The Arcs in the outer env are never consumed — only .clone() is called.
                     let lf_crumb  = lf_view.clone();
                     let lf_refbtn = lf_view.clone();
                     let hu_submit = hu_view.clone();
@@ -293,7 +286,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                     view! {
                         <div class="admin-r2-content">
 
-                            // ── Header ──────────────────────────
                             <div class="admin-section-header">
                                 <div class="admin-section-header-icon">
                                     <IconFolder class="icon-svg" />
@@ -307,7 +299,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                 </div>
                             </div>
 
-                            // ── Toolbar ──────────────────────────
                             <div class="r2-toolbar">
                                 <div class="r2-breadcrumb">
                                     <button
@@ -356,7 +347,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                 </div>
                             </div>
 
-                            // ── Feedback ─────────────────────────
                             {move || if !action_error.get().is_empty() {
                                 view! {
                                     <div class="status-msg status-msg--error">
@@ -379,12 +369,8 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                 view! { <div class="status-msg status-msg--error">{error.get()}</div> }.into_any()
                             } else { view! { <span></span> }.into_any() }}
 
-                            // ── Upload form ───────────────────────
-                            // hu_submit is cloned here; the reactive closure below
-                            // captures it by move and calls .clone() on each invocation.
                             {
                                 move || if show_upload.get() {
-                                    // Clone for the on:submit handler created this invocation
                                     let hu = hu_submit.clone();
                                     view! {
                                         <div class="r2-upload-wrap">
@@ -503,7 +489,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                 } else { view! { <span></span> }.into_any() }
                             }
 
-                            // ── File list ─────────────────────────
                             {
                                 move || if loading.get() {
                                     view! { <div class="r2-loading"><div class="spinner"></div></div> }.into_any()
@@ -518,7 +503,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                 } else {
                                     let total      = files.get().len();
                                     let mdix_count = files.get().iter().filter(|f| !f.is_meta).count();
-                                    // Clone Arcs for this reactive invocation's per-row closures
                                     let hd = hd_rows.clone();
                                     let hr = hr_rows.clone();
 
@@ -535,25 +519,22 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                             </div>
                                             <div class="r2-list">
                                                 {files.get().into_iter().map(|file| {
-                                                    // Per-row: clone handlers and make Arc<String> for key
                                                     let hd = hd.clone();
                                                     let hr = hr.clone();
                                                     let key = Arc::new(file.key.clone());
 
-                                                    // Individual Arc<String> clones for each closure
-                                                    // that needs the key — avoids moving key more than once
-                                                    let key_ren_toggle  = key.clone();
-                                                    let key_del_trigger = key.clone();
-                                                    let key_del_confirm = key.clone();
-                                                    let key_del_cancel  = key.clone();
-                                                    let key_del_check   = key.clone();
+                                                    let key_ren_toggle   = key.clone();
+                                                    let key_del_trigger  = key.clone();
+                                                    let key_del_confirm  = key.clone();
+                                                    let key_del_cancel   = key.clone();
+                                                    let key_del_check    = key.clone();
                                                     let key_deleting_chk = key.clone();
-                                                    let key_ren_form    = key.clone();
-                                                    let key_ren_go      = key.clone();
-                                                    let key_ren_cancel  = key.clone();
-                                                    let key_ren_chk     = key.clone();
-                                                    let key_rip_chk     = key.clone();
-                                                    let key_rip_btn     = key.clone();
+                                                    let key_ren_form     = key.clone();
+                                                    let key_ren_go       = key.clone();
+                                                    let key_ren_cancel   = key.clone();
+                                                    let key_ren_chk      = key.clone();
+                                                    let key_rip_chk      = key.clone();
+                                                    let key_rip_btn      = key.clone();
 
                                                     let name     = file.name.clone();
                                                     let size_str = file.display_size();
@@ -587,7 +568,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                                                     </div>
                                                                 </div>
                                                                 <div class="r2-row-actions">
-                                                                    // Rename toggle button
                                                                     <button
                                                                         class=move || {
                                                                             if rename_key.get().as_deref() == Some(key_ren_toggle.as_str()) {
@@ -608,13 +588,11 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                                                         <IconEdit class="icon-svg icon-xs" />
                                                                     </button>
 
-                                                                    // Delete / Confirm buttons — reactive block
-                                                                    // All Arc<String> keys captured here are independent clones
                                                                     {
-                                                                        let hd_del  = hd.clone();
+                                                                        let hd_del = hd.clone();
                                                                         move || {
                                                                             let is_confirming = confirm_delete.get().as_deref() == Some(key_del_check.as_str());
-                                                                            let is_del        = deleting_key.get().as_deref()  == Some(key_deleting_chk.as_str());
+                                                                            let is_del        = deleting_key.get().as_deref()   == Some(key_deleting_chk.as_str());
 
                                                                             if is_confirming {
                                                                                 let hd2 = hd_del.clone();
@@ -660,7 +638,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                                                 </div>
                                                             </div>
 
-                                                            // Delete confirm label
                                                             {
                                                                 let kchk = key_ren_chk.clone();
                                                                 move || if confirm_delete.get().as_deref() == Some(kchk.as_str())
@@ -674,7 +651,6 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
                                                                 } else { view! { <span></span> }.into_any() }
                                                             }
 
-                                                            // Rename form
                                                             {
                                                                 let hr_ren = hr.clone();
                                                                 move || {
@@ -736,4 +712,4 @@ pub fn AdminR2View(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
             }
         </div>
     }
-    }
+}
