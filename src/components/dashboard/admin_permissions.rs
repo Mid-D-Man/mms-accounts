@@ -2,6 +2,7 @@
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use std::sync::Arc;
+use gloo_storage::Storage;
 use crate::supabase::{SupabaseClient, Profile};
 use crate::components::icons::{
     IconDatabase, IconShield, IconUser, IconCheck, IconX, IconLoader, IconAlertTriangle,
@@ -36,8 +37,7 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
         });
     });
 
-    // handle_role_change wrapped in Arc so it can be cloned across reactive boundaries
-    let handle_role_change: Arc<dyn Fn(String, String) + 'static> = Arc::new(
+    let handle_role_change: Arc<dyn Fn(String, String) + Send + Sync + 'static> = Arc::new(
         move |target_id: String, new_role: String| {
             if processing_id.get().is_some() { return; }
             set_processing_id.set(Some(target_id.clone()));
@@ -45,7 +45,7 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
             set_action_success.set(String::new());
             set_confirm_id.set(None);
             set_confirm_action.set(String::new());
-            let client   = SupabaseClient::new();
+            let client    = SupabaseClient::new();
             let new_role2 = new_role.clone();
             spawn_local(async move {
                 match client.update_user_role(&target_id, &new_role).await {
@@ -71,9 +71,7 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
     view! {
         <div class="admin-permissions-view">
             {
-                // Capture Arcs in the outer reactive closure's environment.
-                // Clone them at the top of each invocation before inner closures take them.
-                let hrc_outer  = handle_role_change.clone();
+                let hrc_outer   = handle_role_change.clone();
                 let my_id_outer = my_id.clone();
 
                 move || if !is_admin() {
@@ -84,7 +82,6 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
                         </div>
                     }.into_any()
                 } else {
-                    // Clone for closures created in THIS reactive invocation
                     let hrc_for_table = hrc_outer.clone();
                     let my_id_table   = my_id_outer.clone();
 
@@ -152,9 +149,6 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
                                 </div>
 
                                 {
-                                    // hrc_for_table and my_id_table live here.
-                                    // The reactive closure below captures them — we clone
-                                    // at the top so they're never consumed.
                                     move || if loading.get() {
                                         view! {
                                             <div class="admin-table-loading"><div class="spinner"></div></div>
@@ -170,8 +164,7 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
                                             })
                                             .collect::<Vec<_>>();
 
-                                        // Clone for this reactive invocation's per-row closures
-                                        let hrc      = hrc_for_table.clone();
+                                        let hrc       = hrc_for_table.clone();
                                         let my_id_tbl = my_id_table.clone();
 
                                         view! {
@@ -191,7 +184,6 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
                                                             let hrc       = hrc.clone();
                                                             let my_id_row = my_id_tbl.clone();
 
-                                                            // Arc<String> for each use of p.id in closures
                                                             let pid            = Arc::new(p.id.clone());
                                                             let pid_promote    = pid.clone();
                                                             let pid_demote     = pid.clone();
@@ -233,7 +225,6 @@ pub fn AdminPermissionsView(profile: ReadSignal<Option<Profile>>) -> impl IntoVi
                                                                     </td>
                                                                     <td class="admin-cell admin-cell--date">{joined}</td>
                                                                     <td class="admin-cell">
-                                                                        // Per-row action cell — reactive
                                                                         {
                                                                             move || {
                                                                                 let is_confirming = confirm_id.get().as_deref() == Some(pid_cfm_chk.as_str());
