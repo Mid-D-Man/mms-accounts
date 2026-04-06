@@ -1,25 +1,10 @@
 // src/components/dashboard/admin_registry.rs
-// Registry submission review — admin-only.
-//
-// Flow:
-//   1. Load all pending RegistrySubmissions (admin RLS policy required).
-//   2. Each row can be expanded to see description, tags, and file preview.
-//   3. Approve → calls dixscript-docs /api/registry/approve (via SupabaseClient).
-//      dixscript-docs: verifies JWT + admin role, moves file from Supabase Storage
-//      to R2 packages/, creates .meta.json, deletes from Supabase Storage, marks
-//      submission approved.
-//   4. Reject → inline note form → calls dixscript-docs /api/registry/reject.
-//   5. On success, the submission is removed from the local list.
-//
-// Note: the admin can ALSO submit packages via the normal RegistryView
-// (user-facing). This view is exclusively for reviewing OTHER users' submissions.
-
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use std::sync::Arc;
 use crate::supabase::{SupabaseClient, Profile, RegistrySubmission};
 use crate::components::icons::{
-    IconPackage, IconCheck, IconX, IconClock, IconLoader,
+    IconPackage, IconCheck, IconX, IconLoader,
     IconAlertTriangle, IconFileText, IconEye,
 };
 
@@ -27,12 +12,10 @@ use crate::components::icons::{
 pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
     let is_admin = move || profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false);
 
-    // ── Data ──────────────────────────────────────────────────
     let (submissions,   set_submissions)   = signal(Vec::<RegistrySubmission>::new());
     let (loading,       set_loading)       = signal(true);
     let (error,         set_error)         = signal(String::new());
 
-    // ── Row UI state (one active at a time) ───────────────────
     let (expanded_id,     set_expanded_id)     = signal(None::<String>);
     let (preview_id,      set_preview_id)      = signal(None::<String>);
     let (preview_content, set_preview_content) = signal(String::new());
@@ -40,12 +23,10 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
     let (reject_id,       set_reject_id)       = signal(None::<String>);
     let (reject_note,     set_reject_note)      = signal(String::new());
 
-    // ── Async operation state ─────────────────────────────────
     let (processing_id,  set_processing_id)  = signal(None::<String>);
     let (action_error,   set_action_error)   = signal(String::new());
     let (action_success, set_action_success) = signal(String::new());
 
-    // ── Load pending submissions ───────────────────────────────
     Effect::new(move |_| {
         if !is_admin() { set_loading.set(false); return; }
         let client = SupabaseClient::new();
@@ -57,8 +38,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
         });
     });
 
-    // ── Approve ────────────────────────────────────────────────
-    // Closures capture only Copy WriteSignals, so they are Fn + Copy + Clone.
     let handle_approve = move |sub_id: String| {
         if processing_id.get().is_some() { return; }
         set_processing_id.set(Some(sub_id.clone()));
@@ -86,7 +65,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
         });
     };
 
-    // ── Reject ─────────────────────────────────────────────────
     let handle_reject = move |sub_id: String, note: String| {
         if processing_id.get().is_some() { return; }
         set_processing_id.set(Some(sub_id.clone()));
@@ -112,9 +90,7 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
         });
     };
 
-    // ── Preview (toggle) ───────────────────────────────────────
     let handle_preview = move |sub_id: String, storage_path: Option<String>| {
-        // Toggle off
         if preview_id.get().as_deref() == Some(sub_id.as_str()) {
             set_preview_id.set(None);
             set_preview_content.set(String::new());
@@ -162,7 +138,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                 view! {
                     <div class="admin-registry-content">
 
-                        // ── Header ─────────────────────────────
                         <div class="admin-section-header">
                             <div class="admin-section-header-icon">
                                 <IconPackage class="icon-svg" />
@@ -177,7 +152,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                             </div>
                         </div>
 
-                        // ── Feedback banners ────────────────────
                         {move || if !action_error.get().is_empty() {
                             view! {
                                 <div class="status-msg status-msg--error">
@@ -202,7 +176,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                             }.into_any()
                         } else { view! { <span></span> }.into_any() }}
 
-                        // ── Main content ────────────────────────
                         {move || if loading.get() {
                             view! {
                                 <div class="areg-loading"><div class="spinner"></div></div>
@@ -229,9 +202,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                     </div>
                                     <div class="areg-list">
                                         {move || {
-                                            // handle_approve / handle_reject / handle_preview
-                                            // capture only Copy signals → they ARE Copy + Clone.
-                                            // Arc wraps them for cheap sharing across iteration items.
                                             let ha = Arc::new(handle_approve);
                                             let hr = Arc::new(handle_reject);
                                             let hp = Arc::new(handle_preview);
@@ -241,7 +211,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                 let hr = hr.clone();
                                                 let hp = hp.clone();
 
-                                                // Arc<String> allows Fn (not FnOnce) click handlers
                                                 let sid            = Arc::new(sub.id.clone());
                                                 let sid_approve    = sid.clone();
                                                 let sid_expand     = sid.clone();
@@ -250,13 +219,11 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                 let sid_preview    = sid.clone();
                                                 let sp             = Arc::new(sub.supabase_storage_path.clone());
 
-                                                // Reactive per-row state derived from parent signals
                                                 let is_exp  = { let s = sid.clone(); move || expanded_id.get().as_deref()    == Some(s.as_str()) };
                                                 let is_prev = { let s = sid.clone(); move || preview_id.get().as_deref()     == Some(s.as_str()) };
                                                 let is_rej  = { let s = sid.clone(); move || reject_id.get().as_deref()      == Some(s.as_str()) };
                                                 let is_proc = { let s = sid.clone(); move || processing_id.get().as_deref()  == Some(s.as_str()) };
 
-                                                // Static display values (owned — no reactive needed)
                                                 let filename    = sub.filename.clone();
                                                 let category    = sub.category.clone();
                                                 let version     = sub.version.clone();
@@ -270,7 +237,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                         if is_exp() { "areg-row areg-row--expanded" }
                                                         else        { "areg-row" }
                                                     }>
-                                                        // ── Row header ──────────────────
                                                         <div class="areg-row-main">
                                                             <div class="areg-row-icon">
                                                                 <IconPackage class="icon-svg icon-xs" />
@@ -294,9 +260,7 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                 </div>
                                                             </div>
 
-                                                            // ── Action buttons ───────────
                                                             <div class="areg-row-actions">
-                                                                // Expand / collapse
                                                                 <button
                                                                     class=move || if is_exp() {
                                                                         "areg-btn areg-btn--expand areg-btn--active"
@@ -323,7 +287,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                     }}
                                                                 </button>
 
-                                                                // Approve
                                                                 <button
                                                                     class="areg-btn areg-btn--approve"
                                                                     disabled=move || is_proc() || processing_id.get().is_some()
@@ -339,7 +302,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                     " Approve"
                                                                 </button>
 
-                                                                // Reject toggle
                                                                 <button
                                                                     class=move || if is_rej() {
                                                                         "areg-btn areg-btn--reject areg-btn--active"
@@ -353,7 +315,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                             set_reject_note.set(String::new());
                                                                         } else {
                                                                             set_reject_id.set(Some((*sid_reject_tog).clone()));
-                                                                            // Auto-expand so the form is visible
                                                                             set_expanded_id.set(Some((*sid_reject_tog).clone()));
                                                                         }
                                                                     }
@@ -364,7 +325,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                             </div>
                                                         </div>
 
-                                                        // ── Expanded details ─────────────
                                                         <div class=move || {
                                                             if is_exp() { "areg-details" }
                                                             else        { "areg-details areg-details--hidden" }
@@ -385,7 +345,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                 } else { view! { <span></span> }.into_any() }}
                                                             </div>
 
-                                                            // Preview button
                                                             <div class="areg-preview-bar">
                                                                 <button
                                                                     class=move || if is_prev() {
@@ -420,7 +379,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                 </button>
                                                             </div>
 
-                                                            // File preview panel
                                                             {move || if is_prev() {
                                                                 view! {
                                                                     <div class="areg-preview-wrap">
@@ -441,7 +399,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                 }.into_any()
                                                             } else { view! { <span></span> }.into_any() }}
 
-                                                            // Rejection form
                                                             {move || if is_rej() {
                                                                 let hr_clone = hr.clone();
                                                                 let sid_cfm  = sid_reject_cfm.clone();
@@ -510,4 +467,4 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
             }}
         </div>
     }
-  }
+                }
