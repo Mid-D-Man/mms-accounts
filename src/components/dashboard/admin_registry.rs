@@ -1,6 +1,7 @@
 // src/components/dashboard/admin_registry.rs
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use std::rc::Rc;
 use std::sync::Arc;
 use crate::supabase::{SupabaseClient, Profile, RegistrySubmission};
 use crate::components::icons::{
@@ -12,20 +13,18 @@ use crate::components::icons::{
 pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView {
     let is_admin = move || profile.get().as_ref().map(|p| p.is_admin()).unwrap_or(false);
 
-    let (submissions,   set_submissions)   = signal(Vec::<RegistrySubmission>::new());
-    let (loading,       set_loading)       = signal(true);
-    let (error,         set_error)         = signal(String::new());
-
+    let (submissions,     set_submissions)     = signal(Vec::<RegistrySubmission>::new());
+    let (loading,         set_loading)         = signal(true);
+    let (error,           set_error)           = signal(String::new());
     let (expanded_id,     set_expanded_id)     = signal(None::<String>);
     let (preview_id,      set_preview_id)      = signal(None::<String>);
     let (preview_content, set_preview_content) = signal(String::new());
     let (preview_loading, set_preview_loading) = signal(false);
     let (reject_id,       set_reject_id)       = signal(None::<String>);
-    let (reject_note,     set_reject_note)      = signal(String::new());
-
-    let (processing_id,  set_processing_id)  = signal(None::<String>);
-    let (action_error,   set_action_error)   = signal(String::new());
-    let (action_success, set_action_success) = signal(String::new());
+    let (reject_note,     set_reject_note)     = signal(String::new());
+    let (processing_id,   set_processing_id)   = signal(None::<String>);
+    let (action_error,    set_action_error)    = signal(String::new());
+    let (action_success,  set_action_success)  = signal(String::new());
 
     Effect::new(move |_| {
         if !is_admin() { set_loading.set(false); return; }
@@ -43,7 +42,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
         set_processing_id.set(Some(sub_id.clone()));
         set_action_error.set(String::new());
         set_action_success.set(String::new());
-
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.approve_submission(&sub_id).await {
@@ -57,10 +55,7 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                         "Approved — package is now live in the registry.".to_string()
                     );
                 }
-                Err(e) => {
-                    set_action_error.set(e);
-                    set_processing_id.set(None);
-                }
+                Err(e) => { set_action_error.set(e); set_processing_id.set(None); }
             }
         });
     };
@@ -70,7 +65,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
         set_processing_id.set(Some(sub_id.clone()));
         set_action_error.set(String::new());
         set_action_success.set(String::new());
-
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.reject_submission(&sub_id, &note).await {
@@ -82,10 +76,7 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                     set_processing_id.set(None);
                     set_action_success.set("Submission rejected.".to_string());
                 }
-                Err(e) => {
-                    set_action_error.set(e);
-                    set_processing_id.set(None);
-                }
+                Err(e) => { set_action_error.set(e); set_processing_id.set(None); }
             }
         });
     };
@@ -96,30 +87,21 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
             set_preview_content.set(String::new());
             return;
         }
-
         let path = match storage_path.filter(|p| !p.is_empty()) {
             Some(p) => p,
-            None    => {
+            None => {
                 set_action_error.set("No file stored for this submission.".to_string());
                 return;
             }
         };
-
         set_preview_id.set(Some(sub_id));
         set_preview_content.set(String::new());
         set_preview_loading.set(true);
-
         let client = SupabaseClient::new();
         spawn_local(async move {
             match client.download_submission_file(&path).await {
-                Ok(text) => {
-                    set_preview_content.set(text);
-                    set_preview_loading.set(false);
-                }
-                Err(e) => {
-                    set_preview_content.set(format!("// Error loading file:\n// {}", e));
-                    set_preview_loading.set(false);
-                }
+                Ok(text) => { set_preview_content.set(text);                              set_preview_loading.set(false); }
+                Err(e)   => { set_preview_content.set(format!("// Error:\n// {}", e));    set_preview_loading.set(false); }
             }
         });
     };
@@ -211,19 +193,39 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                 let hr = hr.clone();
                                                 let hp = hp.clone();
 
-                                                let sid            = Arc::new(sub.id.clone());
+                                                let sid = Arc::new(sub.id.clone());
+                                                let sp  = Arc::new(sub.supabase_storage_path.clone());
+
+                                                // ── Per-row reactive checks wrapped in Rc so each
+                                                //    closure site can independently clone without
+                                                //    requiring Send+Sync (WASM is single-threaded).
+                                                //    Calling `.clone()` on an Rc inside a move ||
+                                                //    closure body keeps the closure Fn, not FnOnce.
+                                                let is_exp: Rc<dyn Fn() -> bool> = {
+                                                    let s = sid.clone();
+                                                    Rc::new(move || expanded_id.get().as_deref() == Some(s.as_str()))
+                                                };
+                                                let is_prev: Rc<dyn Fn() -> bool> = {
+                                                    let s = sid.clone();
+                                                    Rc::new(move || preview_id.get().as_deref() == Some(s.as_str()))
+                                                };
+                                                let is_rej: Rc<dyn Fn() -> bool> = {
+                                                    let s = sid.clone();
+                                                    Rc::new(move || reject_id.get().as_deref() == Some(s.as_str()))
+                                                };
+                                                let is_proc: Rc<dyn Fn() -> bool> = {
+                                                    let s = sid.clone();
+                                                    Rc::new(move || processing_id.get().as_deref() == Some(s.as_str()))
+                                                };
+
+                                                // Arc<String> for click-handler keys
                                                 let sid_approve    = sid.clone();
                                                 let sid_expand     = sid.clone();
                                                 let sid_reject_tog = sid.clone();
                                                 let sid_reject_cfm = sid.clone();
                                                 let sid_preview    = sid.clone();
-                                                let sp             = Arc::new(sub.supabase_storage_path.clone());
 
-                                                let is_exp  = { let s = sid.clone(); move || expanded_id.get().as_deref()    == Some(s.as_str()) };
-                                                let is_prev = { let s = sid.clone(); move || preview_id.get().as_deref()     == Some(s.as_str()) };
-                                                let is_rej  = { let s = sid.clone(); move || reject_id.get().as_deref()      == Some(s.as_str()) };
-                                                let is_proc = { let s = sid.clone(); move || processing_id.get().as_deref()  == Some(s.as_str()) };
-
+                                                // Static display data
                                                 let filename    = sub.filename.clone();
                                                 let category    = sub.category.clone();
                                                 let version     = sub.version.clone();
@@ -232,11 +234,44 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                 let tags_str    = sub.tags.join(", ");
                                                 let submitted   = sub.formatted_submitted();
 
+                                                // ── One Rc clone per closure site that needs is_exp ──
+                                                let ie_div  = is_exp.clone(); // outer div class
+                                                let ie_bcls = is_exp.clone(); // expand btn class
+                                                let ie_bttl = is_exp.clone(); // expand btn title
+                                                let ie_bclk = is_exp.clone(); // expand btn on:click
+                                                let ie_bcon = is_exp.clone(); // expand btn content
+                                                let ie_det  = is_exp.clone(); // details div class
+
+                                                // ── is_prev ──────────────────────────────────────────
+                                                let ip_bcls  = is_prev.clone(); // preview btn class
+                                                // ip_con: captured by the btn content closure;
+                                                // inside that closure body we call ip_con.clone()
+                                                // to get ip_span for the nested span closure.
+                                                let ip_con   = is_prev.clone();
+                                                let ip_panel = is_prev.clone(); // preview panel block
+
+                                                // ── is_rej ───────────────────────────────────────────
+                                                let ir_bcls = is_rej.clone(); // reject btn class
+                                                let ir_bclk = is_rej.clone(); // reject btn on:click
+                                                // ir_form: captured by the form reactive block;
+                                                // iproc_form is also captured and cloned inside.
+                                                let ir_form = is_rej.clone();
+
+                                                // ── is_proc ──────────────────────────────────────────
+                                                let iproc_adis = is_proc.clone(); // approve disabled
+                                                let iproc_acon = is_proc.clone(); // approve content
+                                                let iproc_rdis = is_proc.clone(); // reject btn disabled
+                                                // iproc_form: captured by the reject form closure;
+                                                // cloned inside body for disabled + content closures.
+                                                let iproc_form = is_proc.clone();
+
                                                 view! {
                                                     <div class=move || {
-                                                        if is_exp() { "areg-row areg-row--expanded" }
+                                                        if ie_div() { "areg-row areg-row--expanded" }
                                                         else        { "areg-row" }
                                                     }>
+
+                                                        // ── Row header ──────────────────────────────
                                                         <div class="areg-row-main">
                                                             <div class="areg-row-icon">
                                                                 <IconPackage class="icon-svg icon-xs" />
@@ -261,15 +296,17 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                             </div>
 
                                                             <div class="areg-row-actions">
+
+                                                                // Expand / collapse
                                                                 <button
-                                                                    class=move || if is_exp() {
+                                                                    class=move || if ie_bcls() {
                                                                         "areg-btn areg-btn--expand areg-btn--active"
                                                                     } else {
                                                                         "areg-btn areg-btn--expand"
                                                                     }
-                                                                    title=move || if is_exp() { "Collapse" } else { "Expand" }
+                                                                    title=move || if ie_bttl() { "Collapse" } else { "Expand" }
                                                                     on:click=move |_| {
-                                                                        if is_exp() {
+                                                                        if ie_bclk() {
                                                                             set_expanded_id.set(None);
                                                                             set_preview_id.set(None);
                                                                             set_preview_content.set(String::new());
@@ -280,21 +317,20 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                         }
                                                                     }
                                                                 >
-                                                                    {move || if is_exp() {
+                                                                    {move || if ie_bcon() {
                                                                         view! { <IconX   class="icon-svg icon-xs" /> }.into_any()
                                                                     } else {
                                                                         view! { <IconEye class="icon-svg icon-xs" /> }.into_any()
                                                                     }}
                                                                 </button>
 
+                                                                // Approve
                                                                 <button
                                                                     class="areg-btn areg-btn--approve"
-                                                                    disabled=move || is_proc() || processing_id.get().is_some()
-                                                                    on:click=move |_| {
-                                                                        (ha)((*sid_approve).clone())
-                                                                    }
+                                                                    disabled=move || iproc_adis() || processing_id.get().is_some()
+                                                                    on:click=move |_| { (ha)((*sid_approve).clone()) }
                                                                 >
-                                                                    {move || if is_proc() {
+                                                                    {move || if iproc_acon() {
                                                                         view! { <IconLoader class="icon-svg spin" /> }.into_any()
                                                                     } else {
                                                                         view! { <IconCheck  class="icon-svg icon-xs" /> }.into_any()
@@ -302,15 +338,16 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                     " Approve"
                                                                 </button>
 
+                                                                // Reject toggle
                                                                 <button
-                                                                    class=move || if is_rej() {
+                                                                    class=move || if ir_bcls() {
                                                                         "areg-btn areg-btn--reject areg-btn--active"
                                                                     } else {
                                                                         "areg-btn areg-btn--reject"
                                                                     }
-                                                                    disabled=move || is_proc() || processing_id.get().is_some()
+                                                                    disabled=move || iproc_rdis() || processing_id.get().is_some()
                                                                     on:click=move |_| {
-                                                                        if is_rej() {
+                                                                        if ir_bclk() {
                                                                             set_reject_id.set(None);
                                                                             set_reject_note.set(String::new());
                                                                         } else {
@@ -325,8 +362,9 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                             </div>
                                                         </div>
 
+                                                        // ── Expanded details ─────────────────────────
                                                         <div class=move || {
-                                                            if is_exp() { "areg-details" }
+                                                            if ie_det() { "areg-details" }
                                                             else        { "areg-details areg-details--hidden" }
                                                         }>
                                                             <div class="areg-details-grid">
@@ -334,7 +372,6 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                     <span class="areg-detail-label">"Description"</span>
                                                                     <p class="areg-detail-text">{description}</p>
                                                                 </div>
-
                                                                 {if !tags_str.is_empty() {
                                                                     view! {
                                                                         <div class="areg-detail-block">
@@ -345,41 +382,40 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                 } else { view! { <span></span> }.into_any() }}
                                                             </div>
 
+                                                            // Preview button
                                                             <div class="areg-preview-bar">
                                                                 <button
-                                                                    class=move || if is_prev() {
+                                                                    class=move || if ip_bcls() {
                                                                         "btn btn-ghost btn-sm areg-preview-btn areg-preview-btn--active"
                                                                     } else {
                                                                         "btn btn-ghost btn-sm areg-preview-btn"
                                                                     }
                                                                     on:click=move |_| {
-                                                                        (hp)(
-                                                                            (*sid_preview).clone(),
-                                                                            (*sp).clone(),
-                                                                        )
+                                                                        (hp)((*sid_preview).clone(), (*sp).clone())
                                                                     }
                                                                 >
-                                                                    {move || if preview_loading.get() && is_prev() {
+                                                                    // ip_con owns its Rc. Inside the body we
+                                                                    // call ip_con.clone() for the nested span
+                                                                    // closure — this keeps the outer Fn.
+                                                                    {move || if preview_loading.get() && ip_con() {
                                                                         view! {
                                                                             <IconLoader class="icon-svg spin" />
                                                                             <span>"Loading..."</span>
                                                                         }.into_any()
                                                                     } else {
+                                                                        let ip_span = ip_con.clone();
                                                                         view! {
                                                                             <IconEye class="icon-svg icon-xs" />
                                                                             <span>
-                                                                                {move || if is_prev() {
-                                                                                    "Hide File"
-                                                                                } else {
-                                                                                    "Preview File"
-                                                                                }}
+                                                                                {move || if ip_span() { "Hide File" } else { "Preview File" }}
                                                                             </span>
                                                                         }.into_any()
                                                                     }}
                                                                 </button>
                                                             </div>
 
-                                                            {move || if is_prev() {
+                                                            // File preview panel
+                                                            {move || if ip_panel() {
                                                                 view! {
                                                                     <div class="areg-preview-wrap">
                                                                         {move || if preview_loading.get() {
@@ -399,9 +435,15 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                 }.into_any()
                                                             } else { view! { <span></span> }.into_any() }}
 
-                                                            {move || if is_rej() {
-                                                                let hr_clone = hr.clone();
-                                                                let sid_cfm  = sid_reject_cfm.clone();
+                                                            // Rejection form
+                                                            // ir_form owns its Rc; iproc_form also owned.
+                                                            // Inside the body we clone iproc_form twice
+                                                            // (for disabled attr and for content block).
+                                                            {move || if ir_form() {
+                                                                let iproc_fdis = iproc_form.clone();
+                                                                let iproc_fcon = iproc_form.clone();
+                                                                let hr_c  = hr.clone();
+                                                                let sid_c = sid_reject_cfm.clone();
                                                                 view! {
                                                                     <div class="areg-reject-form">
                                                                         <div class="form-group">
@@ -431,13 +473,13 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
                                                                             </button>
                                                                             <button
                                                                                 class="btn btn-danger btn-sm"
-                                                                                disabled=move || is_proc()
+                                                                                disabled=move || iproc_fdis()
                                                                                 on:click=move |_| {
                                                                                     let note = reject_note.get();
-                                                                                    (hr_clone)((*sid_cfm).clone(), note);
+                                                                                    (hr_c)((*sid_c).clone(), note);
                                                                                 }
                                                                             >
-                                                                                {move || if is_proc() {
+                                                                                {move || if iproc_fcon() {
                                                                                     view! {
                                                                                         <IconLoader class="icon-svg spin" />
                                                                                         <span>"Rejecting..."</span>
@@ -467,4 +509,4 @@ pub fn AdminRegistryView(profile: ReadSignal<Option<Profile>>) -> impl IntoView 
             }}
         </div>
     }
-                }
+                           }
